@@ -14,23 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 
-# darkmatter.py the compiler for DarkMatter
+# dmparse.py the parsing functions of the compiler
 
-import sys
-import dmlex
-import dmparse
-import dmast
-
-def testrun():
-	sourcefile = open( "testsource.dm" , "r" )
-	source = sourcefile.read();
-	sourcefile.close();
-
-
-def main( argv ):
-	print "The DarkMatter compiler for the DCPU16.\nWritten my Marco Aslak Persson.\n"
-	testrun(); # a temporary testing function
-
-if __name__ == "__main__":
-	main( sys.argv );
+from IceLeaf import *
 
