@@ -3,6 +3,8 @@ DarkMatter
 
 DarkMatter is a dedicated programming language for the DCPU16.
 It is a semi high-level langauge made to merge nicely with the low level nature of the DCPU16.
+This project uses the [IceLeaf](https://github.com/thebreadcat/IceLeaf) library for lexing and parsing.
+The offical DCPU16 forum thread can be found [here](http://0x10cforum.com/forum/m/4932880/viewthread/2742995-darkmatter-dedicated-programming-language-for-dcpu16-super-script-c)
 
 Examples:
 ---------
