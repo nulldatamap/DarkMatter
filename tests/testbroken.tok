@@ -1,0 +1,13 @@
+Token.NOTEQL{ 'this' at 1:1 }
+Token.NOTEQL{ 'is' at 1:6 }
+Token.NOTEQL{ 'valid' at 1:9 }
+Token.NOTEQL{ 'lexing' at 1:15 }
+Token.NOTEQL{ 'masterial' at 1:22 }
+Token.NOTEQL{ 'and' at 2:1 }
+Token.NOTEQL{ 'that' at 2:5 }
+Token.NOTEQL{ 'is' at 2:10 }
+Token.NOTEQL{ 'a' at 2:13 }
+Token.NOTEQL{ 'string' at 2:15 }
+Token.EXCLA{ ':' at 2:21 }
+Token.STRING{ '"Hi! I'm a string I can do many cool things. You make me by typing \" and then whatever you want in me, but remember to close me with a \" else you will get in trouble."' at 2:23 }
+Token.EOF{ '' at 4:1 }

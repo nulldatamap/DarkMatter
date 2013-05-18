@@ -45,8 +45,9 @@ keywords = [ "for" , "do" , "while" , "true" , "false" , "if" , "else" , "switch
 lNewline = LexerRule( "NEWLINE" , "\n" , 0 , True );
 lIgnore = LexerRule( "IGNORE" , "[\r \t]" );
 lComment = LexerRule( "COMMENT" , r"(//[^\n]*)|(/\*(.|\n)*\*/)" , 0 , True ); # Comments are still lexed, and are saved in channel 0 as hidden tokens
-sBrokenComment = LexerRule( "BROKEN_COMMENT" , r"/\*" , stateBroken ); # If the valid comment check didn't work, but the 'not closed' comment check did, raise an error
+sBrokenComment = LexerState( "BROKEN_COMMENT" , r"/\*" , stateBroken ); # If the valid comment check didn't work, but the 'not closed' comment check did, raise an error
 lString = LexerRule( "STRING" , '("((\\\\")|[^"])*[^\\\\]")|\'((\\\\\')|[^\'])*[^\\\\]\'' ); # Both single and double quote strings
+lBrokenString = LexerState( "BROKEN_STRING" , '(")|(\')' , stateBroken );
 lEString = LexerRule( "STRING" , '("")|(\'\')' );
 lHex = LexerRule( "HEX" , "0x[a-fA-F0-9]+" );
 lOct = LexerRule( "OCT" , "0[0-8]+" );
@@ -102,7 +103,7 @@ lDot = LexerRule( "DOT" , "\\." );
 lComma = LexerRule( "COMMA" , "," );
 lSemiColon = LexerRule( "SEMICOLON" , ";" );
 
-rules = [ lNewline, lIgnore, lComment, sBrokenComment, lString , lEString , lHex, lOct,
+rules = [ lNewline, lIgnore, lComment, sBrokenComment, lString , lEString , lBrokenString , lHex, lOct,
 	lInt, lIdent, lEql, lNotEql, lNotAssign, lAddAssign, lSubAssign,
 	lMulAssign, lDivAssign, lModAssign, lAndAssign, lOrAssign, lXorAssign,
 	lLessEql, lGreatEql, lLogicAnd, lLogicOr , lLeftShift , lRightShift ,

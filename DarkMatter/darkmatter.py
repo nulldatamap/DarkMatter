@@ -21,17 +21,26 @@ import dmlex
 import dmparse
 import dmast
 
+def readfile( filename ):
+	readfile = open( filename , "r" );
+	data = readfile.read();
+	readfile.close();
+	return data;
+	
+def writefile( filename , data ):
+	writefile = open( filename , "w" );
+	writefile.write( data );
+	writefile.close();
+
 def testrun():
-	sourcefile = open( "../tests/testsource.dm" , "r" )
-	source = sourcefile.read();
-	sourcefile.close();
+	source = readfile( "../tests/testsource.dm" );
 	lexer = dmlex.DMLexer();
 	tokens = lexer.lex( source );
-	outputfile = open( "../tests/testtokens.tok" , "w" );
+	data = "";
 	for token in tokens:
 		if token.hidden == False and token.channel == 1: #Write only the tokens that will be read
-			outputfile.write( str( token ) + "\n" );
-	outputfile.close();
+			data += str( token ) + "\n";
+	writefile( "../tests/testtokens.tok" , data );
 
 
 def main( argv ):
