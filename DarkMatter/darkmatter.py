@@ -22,9 +22,16 @@ import dmparse
 import dmast
 
 def testrun():
-	sourcefile = open( "testsource.dm" , "r" )
+	sourcefile = open( "../tests/testsource.dm" , "r" )
 	source = sourcefile.read();
 	sourcefile.close();
+	lexer = dmlex.DMLexer();
+	tokens = lexer.lex( source );
+	outputfile = open( "../tests/testtokens.tok" , "w" );
+	for token in tokens:
+		if token.hidden == False and token.channel == 1: #Write only the tokens that will be read
+			outputfile.write( str( token ) + "\n" );
+	outputfile.close();
 
 
 def main( argv ):

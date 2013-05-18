@@ -1,0 +1,56 @@
+Token.IDENT{ 'print' at 2:1 }
+Token.OPAREN{ '(' at 2:6 }
+Token.STRING{ '"Hello World!\n"' at 2:7 }
+Token.CPAREN{ ')' at 2:23 }
+Token.IDENT{ 'int' at 4:1 }
+Token.IDENT{ 'beers' at 4:5 }
+Token.ASSIGN{ '=' at 4:11 }
+Token.INT{ '100' at 4:13 }
+Token.WHILE{ 'while' at 5:1 }
+Token.IDENT{ 'beers' at 5:7 }
+Token.CANGL{ '>' at 5:13 }
+Token.INT{ '0' at 5:15 }
+Token.OBRCE{ '{' at 6:1 }
+Token.IDENT{ 'print' at 7:5 }
+Token.OPAREN{ '(' at 7:10 }
+Token.STRING{ '""' at 7:11 }
+Token.ADD{ '+' at 7:14 }
+Token.IDENT{ 'beers' at 7:16 }
+Token.ADD{ '+' at 7:22 }
+Token.STRING{ '" on the wall.\n"' at 7:24 }
+Token.CPAREN{ ')' at 7:41 }
+Token.IDENT{ 'print' at 8:5 }
+Token.OPAREN{ '(' at 8:10 }
+Token.STRING{ '"You take 1 down, you pass it around and you've got "' at 8:11 }
+Token.CPAREN{ ')' at 8:64 }
+Token.IDENT{ 'beers' at 9:5 }
+Token.DEC{ '--' at 9:10 }
+Token.CBRCE{ '}' at 10:1 }
+Token.IDENT{ 'print' at 11:1 }
+Token.OPAREN{ '(' at 11:6 }
+Token.STRING{ '"no more beer on the wall!"' at 11:7 }
+Token.CPAREN{ ')' at 11:34 }
+Token.IDENT{ 'int' at 14:1 }
+Token.IDENT{ 'giveMeAnInt' at 14:5 }
+Token.OPAREN{ '(' at 14:16 }
+Token.IDENT{ 'int' at 14:17 }
+Token.IDENT{ 'myInt' at 14:21 }
+Token.CPAREN{ ')' at 14:26 }
+Token.OBRCE{ '{' at 15:1 }
+Token.IDENT{ 'return' at 16:5 }
+Token.IDENT{ 'myInt' at 16:12 }
+Token.ADD{ '+' at 16:18 }
+Token.INT{ '27' at 16:20 }
+Token.LSHIFT{ '<<' at 16:23 }
+Token.INT{ '1' at 16:26 }
+Token.CBRCE{ '}' at 17:1 }
+Token.IDENT{ 'print' at 18:1 }
+Token.OPAREN{ '(' at 18:6 }
+Token.STRING{ '"My int is "' at 18:7 }
+Token.ADD{ '+' at 18:20 }
+Token.IDENT{ 'giveMeAnInt' at 18:22 }
+Token.OPAREN{ '(' at 18:33 }
+Token.INT{ '3' at 18:34 }
+Token.CPAREN{ ')' at 18:35 }
+Token.CPAREN{ ')' at 18:36 }
+Token.EOF{ '' at 18:37 }
