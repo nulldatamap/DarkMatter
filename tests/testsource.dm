@@ -1,4 +1,4 @@
-//This is a comment!
+/*//This is a comment!
 print("Hello World!\n")
 
 int beers = 100
@@ -15,4 +15,5 @@ int giveMeAnInt(int myInt)
 {
     return myInt + 27 << 1
 }
-print("My int is " + giveMeAnInt(3))
+print("My int is " + giveMeAnInt(3))*/
+10 "Hello world" null true false 1337 01454 0x100

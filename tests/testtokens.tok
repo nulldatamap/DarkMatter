@@ -1,56 +1,9 @@
-Token.NOTEQL{ 'print' at 2:1 }
-Token.OBRCE{ '(' at 2:6 }
-Token.STRING{ '"Hello World!\n"' at 2:7 }
-Token.CBRCE{ ')' at 2:23 }
-Token.NOTEQL{ 'int' at 4:1 }
-Token.NOTEQL{ 'beers' at 4:5 }
-Token.SUB{ '=' at 4:11 }
-Token.EQL{ '100' at 4:13 }
-Token.NOTEQL{ 'while' at 5:1 }
-Token.NOTEQL{ 'beers' at 5:7 }
-Token.ADD{ '>' at 5:13 }
-Token.EQL{ '0' at 5:15 }
-Token.OANGL{ '{' at 6:1 }
-Token.NOTEQL{ 'print' at 7:5 }
-Token.OBRCE{ '(' at 7:10 }
-Token.STRING{ '""' at 7:11 }
-Token.AT{ '+' at 7:14 }
-Token.NOTEQL{ 'beers' at 7:16 }
-Token.AT{ '+' at 7:22 }
-Token.STRING{ '" on the wall.\n"' at 7:24 }
-Token.CBRCE{ ')' at 7:41 }
-Token.NOTEQL{ 'print' at 8:5 }
-Token.OBRCE{ '(' at 8:10 }
-Token.STRING{ '"You take 1 down, you pass it around and you've got "' at 8:11 }
-Token.CBRCE{ ')' at 8:64 }
-Token.NOTEQL{ 'beers' at 9:5 }
-Token.CBRKT{ '--' at 9:10 }
-Token.CANGL{ '}' at 10:1 }
-Token.NOTEQL{ 'print' at 11:1 }
-Token.OBRCE{ '(' at 11:6 }
-Token.STRING{ '"no more beer on the wall!"' at 11:7 }
-Token.CBRCE{ ')' at 11:34 }
-Token.NOTEQL{ 'int' at 14:1 }
-Token.NOTEQL{ 'giveMeAnInt' at 14:5 }
-Token.OBRCE{ '(' at 14:16 }
-Token.NOTEQL{ 'int' at 14:17 }
-Token.NOTEQL{ 'myInt' at 14:21 }
-Token.CBRCE{ ')' at 14:26 }
-Token.OANGL{ '{' at 15:1 }
-Token.NOTEQL{ 'return' at 16:5 }
-Token.NOTEQL{ 'myInt' at 16:12 }
-Token.AT{ '+' at 16:18 }
-Token.EQL{ '27' at 16:20 }
-Token.SSHIFT{ '<<' at 16:23 }
-Token.EQL{ '1' at 16:26 }
-Token.CANGL{ '}' at 17:1 }
-Token.NOTEQL{ 'print' at 18:1 }
-Token.OBRCE{ '(' at 18:6 }
-Token.STRING{ '"My int is "' at 18:7 }
-Token.AT{ '+' at 18:20 }
-Token.NOTEQL{ 'giveMeAnInt' at 18:22 }
-Token.OBRCE{ '(' at 18:33 }
-Token.EQL{ '3' at 18:34 }
-Token.CBRCE{ ')' at 18:35 }
-Token.CBRCE{ ')' at 18:36 }
-Token.EOF{ '' at 18:37 }
+Token.INT{ '10' at 2:1 }
+Token.STRING{ '"Hello world"' at 2:4 }
+Token.NULL{ 'null' at 2:18 }
+Token.TRUE{ 'true' at 2:23 }
+Token.FALSE{ 'false' at 2:28 }
+Token.INT{ '1337' at 2:34 }
+Token.OCT{ '01454' at 2:39 }
+Token.HEX{ '0x100' at 2:45 }
+Token.EOF{ '' at 2:50 }

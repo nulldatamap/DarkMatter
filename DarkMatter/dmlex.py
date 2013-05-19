@@ -38,7 +38,7 @@ def stateBroken( lexer , statename ):
 
 # Keywords:
 
-keywords = [ "for" , "do" , "while" , "true" , "false" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" ];
+keywords = [ "for" , "do" , "while" , "true" , "false" , "null" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" ];
 
 # Lexing rules:
 

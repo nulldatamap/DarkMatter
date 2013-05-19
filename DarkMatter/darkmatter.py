@@ -35,12 +35,19 @@ def writefile( filename , data ):
 def testrun():
 	source = readfile( "../tests/testsource.dm" );
 	lexer = dmlex.DMLexer();
+	parser = dmparse.DMParser();
 	tokens = lexer.lex( source );
 	data = "";
 	for token in tokens:
 		if token.hidden == False and token.channel == 1: #Write only the tokens that will be read
 			data += str( token ) + "\n";
 	writefile( "../tests/testtokens.tok" , data );
+	ast = parser.parse( tokens );
+	data = "[ ";
+	for st in ast:
+		data += str( st ) + " , ";
+	data += " ]";
+	writefile( "../tests/testparse.ast" , data );
 
 
 def main( argv ):
