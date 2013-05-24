@@ -38,18 +38,25 @@ def testrun():
 	parser = dmparse.DMParser();
 	tokens = lexer.lex( source );
 	data = "";
+	extra = "";
 	for token in tokens:
 		if token.hidden == False and token.channel == 1: #Write only the tokens that will be read
 			data += str( token ) + "\n";
 	writefile( "../tests/testtokens.tok" , data );
 	ast = parser.parse( tokens );
-	data = "[ ";
+	data = ""
 	for st in ast:
-		data += str( st ) + " , ";
-	data += " ]";
-	writefile( "../tests/testparse.ast" , data );
+		data += str( st ) + "\n";
+		if st.type == "op":
+			extra += printOp( st ) + "\n";
+	writefile( "../tests/testparse.ast" , data+extra );
 
-
+def printOp( data ):
+	if data.type == "literal":
+		return str( data.value )
+	return "( %s %s %s )"%( printOp( data.left ) , data.op , printOp( data.right ) );
+	
+	
 def main( argv ):
 	print "The DarkMatter compiler for the DCPU16.\nWritten my Marco Aslak Persson.\n"
 	testrun(); # a temporary testing function

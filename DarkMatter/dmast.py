@@ -15,34 +15,3 @@
 #
 
 # dmast.py the AST functions of the compiler
-
-from IceLeaf import *
-
-class ASTObject(object):
-	"""An abstract syntax tree object, which has an identifying type,
-	and then a dynamic set of variables. You can get the underlying
-	dictionary with ._data
-	"""
-	def __init__( self , type , **data ):
-		"""type  :  the type of the AST
-		**data  :  the starting data for the AST
-		"""
-		self.type = type;
-		self.data = data;
-	
-	def __getattribute__( self , name ):
-		if name == "type":
-			return object.__getattribute__( self , "type" );
-		elif name == "_data":
-			return object.__getattribute__( self , "data" );
-		else:
-			return object.__getattribute__( self , "data" )[name];
-	
-	def __setattribute__( self , name , value ):
-		if name != "type" and name != "_data":
-			object.__getattribute__( self , "data" )[name] = value;
-		elif name == "_data":
-			object.__setattribute__( self , "data" , value );
-	
-	def __str__( self ):
-		return "ASTObject.%s%s"%(object.__getattribute__( self , "type" ),str( object.__getattribute__( self , "data" ) ) );

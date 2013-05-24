@@ -1,1 +1,6 @@
-[ ASTObject.literal{'vtype': 'int', 'value': 10} , ASTObject.literal{'vtype': 'string', 'value': 'Hello world'} , ASTObject.literal{'vtype': 'int', 'value': 0} , ASTObject.literal{'vtype': 'int', 'value': 1} , ASTObject.literal{'vtype': 'int', 'value': 0} , ASTObject.literal{'vtype': 'int', 'value': 1337} , ASTObject.literal{'vtype': 'int', 'value': 812} , ASTObject.literal{'vtype': 'int', 'value': 256} ,  ]
+ASTObject.literal{ vtype: int , value: 19 , }
+ASTObject.functioncall{ arguments: [ ASTObject.literal{ vtype: int , value: 10 , } , ASTObject.literal{ vtype: string , value: hello world , } , ] , name: myfunction , }
+ASTObject.op{ right: ASTObject.op{ right: ASTObject.literal{ vtype: int , value: 3 , } , op: * , left: ASTObject.literal{ vtype: int , value: 3 , } , } , op: + , left: ASTObject.op{ right: ASTObject.literal{ vtype: int , value: 3 , } , op: * , left: ASTObject.literal{ vtype: int , value: 1 , } , } , }
+ASTObject.property{ owner: ASTObject.var{ name: var , } , property: test , }
+ASTObject.property{ owner: ASTObject.arrayindex{ index: ASTObject.op{ right: ASTObject.property{ owner: ASTObject.var{ name: f , } , property: n , } , op: * , left: ASTObject.property{ owner: ASTObject.functioncall{ arguments: [ ASTObject.property{ owner: ASTObject.var{ name: var , } , property: var , } , ] , name: myfunc , } , property: n , } , } , name: run , } , property: var , }
+( ( 1 * 3 ) + ( 3 * 3 ) )

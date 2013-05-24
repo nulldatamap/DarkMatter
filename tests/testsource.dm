@@ -16,4 +16,8 @@ int giveMeAnInt(int myInt)
     return myInt + 27 << 1
 }
 print("My int is " + giveMeAnInt(3))*/
-10 "Hello world" null true false 1337 01454 0x100
+( 19 );
+myfunction( 10 , "hello world" );
+1 * 3 + 3 * 3;
+var.test;
+run[ myfunc( var.var ).n * f.n ].var;
