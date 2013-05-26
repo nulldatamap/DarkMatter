@@ -39,9 +39,9 @@ class DMParser( Parser ):
 		self.skipTokens(); # Skip past comments and newlines that the parser might start at
 		exprs = [];
 		while not self.matches( "EOF" ):
-			v = self.expression();
-			exprs.append( v )
-			self.nextif( "SEMICOLON" )
+			v = self.toplevelcode();
+			if v:
+				exprs.append( v )
 		return exprs;
 	
 	def literal( self ):
@@ -81,7 +81,7 @@ class DMParser( Parser ):
 		tk = self.ternary();
 		for i in range( len( tks ) ):
 			if self.nextif( tks[ i ] ):
-				return ASTObject( "op" , left=tk , op=ops[ i ] , right=self.assignment() );
+				return ASTObject( "op" , left=tk , op=ops[ i ] , right= self.expression() );
 		return tk;
 		
 	def ternary(self):
@@ -155,6 +155,8 @@ class DMParser( Parser ):
 		
 	def unary( self ):
 		# x++ x-- ++x --x !x ~x x as y @ & sizeof
+		if self.nextif( "SUB" ):
+			return ASTObject( "op" , op="-x", var= self.unary() );
 		if self.nextif( "INC" ):
 			return ASTObject( "op" , op= "++x", var= self.unary() );
 		if self.nextif( "DEC" ):
@@ -164,20 +166,38 @@ class DMParser( Parser ):
 		if self.nextif( "TILDE" ):
 			return ASTObject( "op" , op= "~", var= self.unary() );
 		if self.nextif( "AND" ):
-			return ASTObject( "op" , op= "addr", var= self.unary() );
+			ast = ASTObject( "op" , op= "addr", var= self.unary() );
+			if ast.var.type == "vardec" and ast.var.vtype.ispointer == False:
+				ast.var.vtype.ispointer = True;
+				return ast.var;
+			return ast;
 		if self.nextif( "AT" ):
 			return ASTObject( "op" , op= "@", var= self.unary() );
 		if self.nextif( "SIZEOF" ):
 			return ASTObject( "op" , op= "sizeof", var= self.unary() );
 		tk = self.term();
 		if self.nextif( "INC" ):
-			return ASTObject( "op" , op= "x++", var= self.unary() );
+			return ASTObject( "op" , op= "x++", var= tk );
 		if self.nextif( "DEC" ):
-			return ASTObject( "op" , op= "x--", var= self.unary() );
+			return ASTObject( "op" , op= "x--", var= tk );
 		if self.nextif( "AS" ):
-			return ASTObject( "op" , op= "as", var= self.unary() , type= self.expect( "IDENT" ) );
+			return ASTObject( "op" , op= "as", var= tk , vtype= self.expect( "IDENT" ).data );
+		return tk;
 	
 	def term( self ):
+		# type varname ( aka. variable definition, this is not an expression for the sake of ease )
+		self.mark()
+		ht = self.deftype();
+		if ht and self.matches( "IDENT" ):
+			self.popmark();
+			ast = ASTObject( "vardec" , vtype= ht , varname=self.next().data );
+			if self.nextif( "OBRKT" ):
+				ast.vtype.isarray = True;
+				ast.vtype.arraysize = self.expression();
+				self.expect( "CBRKT" );
+			return ast;
+		else:
+			self.restore();
 		# function(  )
 		tk = self.matches( "IDENT" ) and self.lookaheadmatches( "OPAREN" );
 		if tk:
@@ -190,27 +210,44 @@ class DMParser( Parser ):
 				if not self.nextif( "COMMA" ):
 					break;
 			self.expect( "CPAREN" , "')'" )
-			p = self.prop( ast );
+			p = self.sur( ast );
 			if p:
 				return p;
 			return ast;
-		# array[ expr ]
-		tk = self.matches( "IDENT" ) and self.lookaheadmatches( "OBRKT" );
+		# structname{  }
+		# structname{ field1= value , field2 = 10 }
+		tk = self.matches( "IDENT" ) and self.lookaheadmatches( "OBRCE" );
 		if tk:
-			tk = self.next();
-			ast = ASTObject( "arrayindex" , name=tk.data , index=None );
+			tk = self.next().data;
+			self.next();
+			ast = ASTObject( "structcontruct" , struct= tk , fields= {} );
+			while not self.matches( "CBRCE" ):
+				fn = self.expect( "IDENT" ).data;
+				self.expect( "ASSIGN" , "'='" );
+				ast.fields[ fn ] = self.expression();
+				if not self.nextif( "COMMA" ):
+					break;
+			self.expect( "CBRCE" , "'}'" );
+			return ast;
+		# [ expr ] 
+		if self.matches( "OBRKT" ):
+			ast = ASTObject( "ramindex" , index=None );
 			self.next();
 			ast.index = self.expression();
+			if self.nextif( "COMMA" ):
+				ast.type = "arrayliteral"
+				ast.values = [ ast.index ];
+				while not self.nextif( "CBRKT" ):
+					ast.values.append( self.expression() );
+					self.nextif( "COMMA" );
+				return ast;
 			self.expect( "CBRKT" , "']'" )
-			p = self.prop( ast );
-			if p:
-				return p;
 			return ast;
 		# ( expr )
 		if self.nextif( "OPAREN" ):
 			ast = self.expression();
 			self.expect( "CPAREN" , "')'" );
-			p = self.prop( ast );
+			p = self.sur( ast );
 			if p:
 				return p;
 			return ast;
@@ -218,7 +255,7 @@ class DMParser( Parser ):
 		tk = self.nextif( "IDENT" );
 		if tk:
 			ast = ASTObject( "var" , name=tk.data );
-			p = self.prop( ast );
+			p = self.sur( ast );
 			if p:
 				return p;
 			return ast
@@ -228,15 +265,205 @@ class DMParser( Parser ):
 		except ParserError:
 			raise ParserError( self.cur() , "a valid variable name or literal" );
 			
-	def prop( self , ownerr ):
+	def sur( self , ownerr ):
+		# .myvar.someothervarmaybe
+		# expr[expr]
 		top = None;
-		ast = ASTObject( "property" , owner=ownerr , property="" );
 		if self.nextif( "DOT" ):
+			ast = ASTObject( "property" , owner=ownerr , property="" );
 			tk = self.expect( "IDENT" );
 			ast.property = tk.data;
-			top = self.prop( ast );
+			top = self.sur( ast );
 			if top:
 				return top;
 			return ast;
+		if self.nextif( "OBRKT" ):
+			ast = ASTObject( "arrayindex" , owner=ownerr , index=self.expression() );
+			self.expect( "CBRKT" );
+			top = self.sur( ast );
+			if top:
+				return top;
+			return ast;
+		return False;
+	
+	def codestatement( self ):
+		if self.matches( "IDENT" ) and self.lookaheadmatches( "COLON" ):
+			ast = ASTObject( "label" , name= self.next().data );
+			self.next();
+			return ast;
+		if self.nextif( "CONTINUE" ):
+			return ASTObject( "continuestatement" );
+		if self.nextif( "BREAK" ):
+			return ASTObject( "breakstatement" );
+		if self.nextif( "RETURN" ):
+			return ASTObject( "returnstatement" , value= self.expression() );
+		if self.nextif( "IF" ):
+			ast = ASTObject( "ifstatement" , condition=self.expression()  , iftrue= self.codeblock() , elsebody=None );
+			if self.nextif( "ELSE" ):
+				ast.elsebody = self.codeblock();
+			return ast;
+		if self.nextif( "FOR" ):
+			par = self.nextif( "OPAREN" )
+			ast = ASTObject( "forloop" , init= self.peexpr() , condition= self.peexpr() , step= self.peexpr() , body= None );
+			if par:
+				self.expect( "CPAREN" , "')'" );
+			ast.body = self.codeblock();
+			return ast;
+		if self.nextif( "WHILE" ):
+			return ASTObject( "whileloop" , condition= self.peexpr() , body= self.codeblock() );
+		if self.nextif( "DO" ):
+			ast = ASTObject( "dowhileloop" , condition= None , body= self.codeblock() );
+			self.expect( "WHILE" );
+			ast.condition = self.peexpr();
+			return ast;
+		if self.nextif( "REPEAT" ):
+			ast = ASTObject( "repeatloop" , amount= self.expression() , body= None , withvar= None );
+			if self.nextif( "WITH" ):
+				ast.withvar = self.peexpr();
+			ast.body = self.codeblock();
+			return ast;
+		if self.nextif( "SWITCH" ):
+			ast = ASTObject( "switchstatement" , value= self.expression() , cases= [] , body= [] , defaultcase= None );
+			self.expect( "OBRCE" );
+			li = 0;
+			cased = False;
+			while not self.matches( "CBRCE" ):
+				if self.nextif( "CASE" ):
+					ast.cases.append( ASTObject( "case" , testvalue= self.term() , lineindex=li ) );
+					self.expect( "COLON" );
+				if self.nextif( "DEFAULT" ):
+					ast.defaultcase = li;
+					self.expect( "COLON" );
+				tk = self.code();
+				if tk:
+					li += 1;
+					ast.body.append( tk );
+			self.expect( "CBRCE" );
+			return ast;
+		return None;
+	
+	def peexpr( self ): #Stands for Possibly Empty EXPRession ( aka an expression or a semicolon instead )
+		if self.nextif( "SEMICOLON" ) or self.matches( "EOF" ):
+			return None;
+		expr = self.expression();
+		self.nextif( "SEMICOLON" ); #Consume trailing semicolon. Just like all the other uses below
+		return expr;
+	
+	def deftype( self ):
+		self.mark();
+		ast = ASTObject( "deftype" , ispointer= False , isarray = False , arraysize=0 , typename= "" );
+		if self.nextif( "AND" ):
+			ast.ispointer = True;
+		if self.matches( "IDENT" ):
+			ast.typename = self.next().data;
 		else:
-			return False;
+			self.restore();
+			return None;
+		if self.nextif( "OBRKT" ):
+			if not self.nextif( "CBRKT" ):
+				self.restore();
+				return None;
+			ast.isarray = True;
+		return ast;
+	
+	def code( self ):
+		if self.nextif( "SEMICOLON" ) or self.matches( "EOF" ):
+			return None;
+		smt = self.codestatement();
+		if smt:
+			self.nextif( "SEMICOLON" )
+			return smt;
+		expr = self.expression();
+		self.nextif( "SEMICOLON" )
+		return expr;
+	
+	def codeblock( self , curlblock= False ):
+		ast = ASTObject( "codeblock" , code= [] );
+		if self.nextif( "OBRCE" ):
+			while not self.matches( "CBRCE" ):
+				c = self.code();
+				if c:
+					ast.code.append( c );
+				if self.matches( "EOF" ):
+					raise ParserError( self.cur() , "'}'" );
+			self.expect( "CBRCE" , "'}'" );
+			return ast;
+		elif curlblock:
+			raise ParserError( self.cur() , "a valid code block" );
+		else:
+			try:
+				return self.code();
+			except:
+				raise ParserError( self.cur() , "a valid code block or code line" )
+				
+	def toplevelcode( self ):
+		if self.nextif( "SEMICOLON" ) or self.matches( "EOF" ):
+			return None;
+		smt = self.toplevelstatement();
+		if smt:
+			self.nextif( "SEMICOLON" );
+			return smt;
+		smt = self.codestatement();
+		if smt:
+			self.nextif( "SEMICOLON" )
+			return smt;
+		expr = self.expression();
+		self.nextif( "SEMICOLON" )
+		return expr;
+	
+	def toplevelstatement( self ):
+		self.mark()
+		ht = self.deftype();
+		if ht and self.matches( "IDENT" ) and self.lookaheadmatches( "OPAREN" ):
+			self.popmark();
+			ast = ASTObject( "functiondec" , returntype= ht , name= self.next().data , arguments= [] );
+			self.next();
+			while not self.matches( "CPAREN" ):
+				vt = self.deftype();
+				if not vt:
+					raise ParserError( self.cur() , "a valid type" );
+				av = ASTObject( "argdef" , vtype= vt , name= self.expect( "IDENT" ).data );
+				ast.arguments.append( av );
+				if not self.nextif( "COMMA" ):
+					break;
+			self.expect( "CPAREN" , "')'" )
+			if self.matches( "OBRCE" ):
+				ast.type = "functiondef";
+				ast.body = self.codeblock( True );
+			return ast;
+		else:
+			self.restore();
+		if self.nextif( "STRUCT" ):
+			ast = ASTObject( "structdec" , name= self.expect( "IDENT" ).data );
+			if self.nextif( "OBRCE" ):
+				ast.type = "structdef";
+				ast.fields = {};
+				while not self.matches( "CBRCE" ):
+					vt = self.deftype();
+					if not vt:
+						raise ParserError( self.cur() , "a valid type" );
+					ast.fields[ self.expect( "IDENT" ).data ] = vt;
+					if self.nextif( "OBRKT" ):
+						vt.isarray = True;
+						vt.arraysize = self.expression();
+						self.expect( "CBRKT" );
+					self.nextif( "SEMICOLON" );
+				self.expect( "CBRCE" );
+			return ast;
+		if self.nextif( "TYPEDEF" ):
+			ast = ASTObject( "typedef" , name= "" , vtype= self.deftype() );
+			if not ast.vtype:
+				raise ParserError( self.cur() , "a valid type" );
+			ast.name = self.expect( "IDENT" ).data;
+			return ast;
+		if self.nextif( "CONST" ):
+			ast = ASTObject( "constdef" , name= "" , vtype= self.deftype() );
+			if not ast.vtype:
+				raise ParserError( self.cur() , "a valid type" );
+			ast.name = self.expect( "IDENT" ).data;
+			self.expect( "ASSIGN", "a value for the constant" );
+			ast.value = self.expression();
+			self.nextif( "SEMICOLON" );
+			return ast;
+		return None;
+			

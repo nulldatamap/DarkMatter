@@ -47,8 +47,8 @@ def testrun():
 	data = ""
 	for st in ast:
 		data += str( st ) + "\n";
-		if st.type == "op":
-			extra += printOp( st ) + "\n";
+#		if st.type == "op":
+#			extra += printOp( st ) + "\n";
 	writefile( "../tests/testparse.ast" , data+extra );
 
 def printOp( data ):
