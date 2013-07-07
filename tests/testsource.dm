@@ -1,9 +1,28 @@
+x = ( y + 3 ) * ( z - 3 );
+//const int PI = 788;
+x = x + 0 - 0;
+x = x * 0;
+pi = PI;
+tau = pi * 2 / 2 + ( 9 - 27 << 2 ); // 65464
+pi = tua + 2;
+n = 2 + 3 * ( pi = pi<<1 );
+tua = p * n;
+tua = ( x + 2 ) - 2
+tau = tua * 8;
+tua = tua / 128;
+
+
+/*
 //This is a comment!
 print("Hello World!\n")
 
 struct predef;
 
-const predef var = predef{  };
+const predef VAR = 0x1337;
+const int OTHER = VAR * 9001 + 911;
+
+var.ver.vor( args );
+vor( args ).ver;
 
 typedef &char string;
 typedef &string strings;
@@ -80,9 +99,9 @@ switch ( x )
 
 void function( int v );
 
-void functiom( int v )
+void function( int v )
 {
 	print( "I'm the definition!" )
 }
 
-
+*/

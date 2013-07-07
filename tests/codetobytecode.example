@@ -1,0 +1,191 @@
+// ORIGINAL SOURCE
+
+pointer alloc( int size )
+{
+	if( size == 0 )
+		return 0;
+	if( mem_allocated + size > mem_capasity )
+		return 0;
+	int offset = 0;
+	while( offset < mem_capasity )
+	{
+		if( [ mem_base + offset ] == 0 )
+		{
+			int index = 1;
+			if( [ mem_base + offset + index ] == 0 )
+			{
+				if( index == size )
+				{
+					[ mem_base + offset ] = size;
+					mem_allocated += size + 1;
+					return mem_base + offset;
+				}
+			}else
+			{
+				offset += index;
+			}
+		}else
+		{
+			offset += [ mem_base + offset ];
+		}
+	}
+	return 0;
+}
+
+// REGISTER APPLYANCE + FUNCTION TRANSFORMATION
+
+pointer A  alloc( int A )
+{
+	if( A == 0 )
+	{
+		return;
+	}
+	if( mem_allocated + A > mem_capasity )
+	{
+		A = 0;
+		return;
+	}
+	B = 0;
+	while( B < mem_capasity )
+	{
+		if( [ mem_base + B ] == 0 )
+		{
+			C = 1;
+			if( [ mem_base + B + C ] == 0 )
+			{
+				if( C == A )
+				{
+					[ mem_base + B ] = A;
+					mem_allocated += A + 1;
+					return mem_base + B;
+				}
+			}else
+			{
+				B += C;
+			}
+		}else
+		{
+			B += [ mem_base + B ];
+		}
+	}
+	A = 0;
+	return;
+}
+
+// FLOW RESTRUCTURING
+
+proc A as pointer alloc( A as int )
+{
+	if( A == 0 ) return;
+	if( mem_allocated + A > mem_capasity ) goto end;
+	B = 0;
+whileloop:
+	if( B < mem_capasity ) goto end;
+	if( [ mem_base + B ] != 0 ) goto if1else;
+	C = 1;
+	if( [ mem_base + B + C ] != 0 ) goto if2else;
+	if( C != A ) goto whileloop;
+	[ mem_base + B ] = A;
+	mem_allocated += A + 1;
+	return mem_base + B;
+	goto whileloop;
+if2else:
+	B += C;
+	goto whileloop;
+if1else:
+	B += [ mem_base + B ];
+	goto whileloop;
+end:
+	A = 0;
+	return;
+}
+
+// STATEMENT DESECTING
+
+proc A as pointer alloc( A as int )
+{
+	if( A == 0 ) return;
+	X = mem_allocated
+	X += A;
+	if( X > mem_capasity ) goto end;
+	B = 0;
+whileloop:
+	if( B < mem_capasity ) goto end;
+	X = mem_base
+	X += B;
+	if( [ X ] != 0 ) goto if1else;
+	C = 1;
+	X = B
+	X += C;
+	Y = mem_base;
+	Y += X
+	if( [ Y ] != 0 ) goto if2else;
+	if( C != A ) goto whileloop;
+	X = mem_base;
+	X += B;
+	[ X ] = A;
+	mem_allocated += A;
+	mem_allocated += 1;
+	A = mem_base;
+	A += B;
+	return;
+	goto whileloop;
+if2else:
+	B += C;
+	goto whileloop;
+if1else:
+	X = mem_base;
+	X += B;
+	B += [ X ];
+	goto whileloop;
+end:
+	A = 0;
+	return;
+}
+
+// BYTECODE GENERATION
+
+alloc:
+	ife A, 0
+		set pc, pop
+	set X, [mem_allocated]
+	add X, A
+	ifg X, [mem_capasity]
+		set pc, _end
+	set B, 0;
+._whileloop:
+	ifl B, [mem_capasity]
+		set pc, _end
+	set X, [mem_base]
+	add X, B
+	ifn [ X ], 0
+		set pc, _if1else
+	set C, 1
+	set X = B
+	add X, C
+	set Y, [mem_base]
+	add Y, X
+	ifn [ Y ], 0
+		set pc, _if2else
+	ifn C, A
+		set pc, _whileloop
+	set X, [mem_base]
+	add X, B
+	set [ X ], A
+	add [mem_allocated], A
+	add [mem_allocated], 1
+	set A, [mem_base]
+	add A, B
+	set pc, pop
+	set pc, _whileloop
+._if2else:
+	add B, C
+	set pc, _whileloop
+._if1else:
+	set X, [mem_base]
+	add X, B
+	set B, [ X ]
+	set pc, _whileloop
+._end:
+	set A, 0
+	set pc, pop

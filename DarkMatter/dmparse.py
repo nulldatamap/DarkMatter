@@ -23,7 +23,7 @@ from IceLeaf import *
 # unary		 | x++ x-- ++x --x !x ~x x as y @ & sizeof
 # mult       | * / %
 # add        | + -
-# shiftcomp  | << >> >>> < <= > >= == != <>
+# shiftcomp  | << >> < <= > >= == != <>
 # bop        | & ^ | && and || or
 # ternary    | ?:
 # assignment | = += -= *= /= %= &= ^= |= <<= >>= ~=
@@ -36,7 +36,7 @@ class DMParser( Parser ):
 	
 	def parse( self , tokens ):
 		Parser.parse( self , tokens );
-		self.skipTokens(); # Skip past comments and newlines that the parser might start at
+		self.skiptokens(); # Skip past comments and newlines that the parser might start at
 		exprs = [];
 		while not self.matches( "EOF" ):
 			v = self.toplevelcode();
@@ -47,22 +47,22 @@ class DMParser( Parser ):
 	def literal( self ):
 		tk = self.nextif( "NULL" );
 		if tk:
-			return ASTObject( "literal" , vtype="int", value=0 )
+			return ASTObject( "literal" , vtype="int", value=0, cast="pointer" , pos= ( tk.line , tk.pos ) )
 		tk = self.nextif( "TRUE" );
 		if tk:
-			return ASTObject( "literal" , vtype="int", value=1 )
+			return ASTObject( "literal" , vtype="int", value=1, cast="bool", pos= ( tk.line , tk.pos ) )
 		tk = self.nextif( "FALSE" );
 		if tk:
-			return ASTObject( "literal" , vtype="int", value=0 )
+			return ASTObject( "literal" , vtype="int", value=0, cast="bool", pos= ( tk.line , tk.pos ) )
 		tk = self.nextif( "INT" );
 		if tk:
-			return ASTObject( "literal" , vtype="int", value= int( tk.data ) )
+			return ASTObject( "literal" , vtype="int", value= int( tk.data ), cast="int", pos= ( tk.line , tk.pos ) )
 		tk = self.nextif( "OCT" );
 		if tk:
-			return ASTObject( "literal" , vtype="int", value= int( tk.data , 8 ) )
+			return ASTObject( "literal" , vtype="int", value= int( tk.data , 8 ), cast="uint", pos= ( tk.line , tk.pos ) )
 		tk = self.nextif( "HEX" );
 		if tk:
-			return ASTObject( "literal" , vtype="int" , value= int( tk.data[2:] , 16 ) );
+			return ASTObject( "literal" , vtype="int" , value= int( tk.data[2:] , 16 ), cast="uint", pos= ( tk.line , tk.pos ) );
 		tk = self.nextif( "STRING" );
 		if tk:
 			v = tk.data[1:-1];
@@ -70,118 +70,91 @@ class DMParser( Parser ):
 			v.replace( "\\n" , "\n" );
 			v.replace( "\\\"" , "\"" );
 			v.replace( "\\'" , "'" );
-			return ASTObject( "literal" , vtype="string" , value=v );
+			return ASTObject( "literal" , vtype="string" , value=v, cast="string", pos= ( tk.line , tk.pos ) );
 		raise ParserError( self.cur() , "a valid literal" );
 		
 	def expression(self):
 		#= += -= *= /= %= &= ^= |= <<= >>= ~=
-		tks = [ "ASSIGN" , "ADDASSIGN" , "SUBASSIGN" , "MULASSIGN" , "DIVASSIGN" , "MODASSIGN" , "ANDASSIGN" , "XORASSIGN" , 
-		"ORASSIGN" , "NOTASSIGN" ];
-		ops = [ "=" , "+=" , "-=" , "*=" , "/=" , "%=" , "&=" , "^=" , "|=" , "~=" ];
+		tks = { "ASSIGN":"=" , "ADDASSIGN":"+=" , "SUBASSIGN":"-=" , "MULASSIGN":"*=" , "DIVASSIGN":"/=" , "MODASSIGN":"%=" , "ANDASSIGN":"&=" , "XORASSIGN":"^=" , 
+		"ORASSIGN":"|=" , "NOTASSIGN":"~=" };
 		tk = self.ternary();
-		for i in range( len( tks ) ):
-			if self.nextif( tks[ i ] ):
-				return ASTObject( "op" , left=tk , op=ops[ i ] , right= self.expression() );
+		while self.cur().type in tks.keys():
+			t = self.next().type;
+			tk = ASTObject( "op" , left=tk , op=tks[t] , pos= ( self.cur().line , self.cur().pos ) , right= self.ternary() );
 		return tk;
 		
 	def ternary(self):
 		tk = self.bop();
 		if self.nextif( "QUEST" ):
 			iftrue = self.expression();
+			pos = ( self.cur().line , self.cur().pos );
 			self.expect( "COLON" );
 			iffalse = self.expression();
-			return ASTObject( "ternary" , condition=tk , iftrue=iftrue , iffalse=iffalse );
+			return ASTObject( "ternary" , condition=tk , iftrue=iftrue , iffalse=iffalse, pos= pos );
 		return tk;
 	
 	def bop( self ):
 		# & ^ | && and || or
+		tks = { "AND":"&", "XOR":"^", "OR":"|", "LOGICAND":"&&", "LOGICOR":"||" };
 		tk = self.shiftcomp();
-		if self.nextif( "AND" ):
-			return ASTObject( "op" , left=tk , op="&" , right= self.bop() );
-		if self.nextif( "XOR" ):
-			return ASTObject( "op" , left=tk , op="^" , right= self.bop() );
-		if self.nextif( "OR" ):
-			return ASTObject( "op" , left=tk , op="|" , right= self.bop() );
-		if self.nextif( "LOGICAND" ):
-			return ASTObject( "op" , left=tk , op="&&" , right= self.bop() );
-		if self.nextif( "LOGICOR" ):
-			return ASTObject( "op" , left=tk , op="||" , right= self.bop() );
+		while self.cur().type in tks.keys():
+			t = self.next().type;
+			tk =  ASTObject( "op" , left=tk , op=tks[t] , pos= ( self.cur().line , self.cur().pos ) , right= self.shiftcomp() );
 		return tk;
 		
 	def shiftcomp( self ):
+		tks = { "LSHIFT":"<<", "RSHIFT":">>", "OANGL":"<", "CANGLE":">" , "LESSEQL":"<=", "GREATEQL":">=", "EQL":"==", "NOTEQL":"!=" };
 		tk =  self.add();
-		if self.nextif( "LSHIFT" ):
-			return ASTObject( "op" , left=tk , op="<<" , right= self.shiftcomp() );
-		if self.nextif( "RSHIFT" ):
-			return ASTObject( "op" , left=tk , op=">>" , right= self.shiftcomp() );
-		if self.nextif( "SSHIFT" ):
-			return ASTObject( "op" , left=tk , op=">>>" , right= self.shiftcomp() );
-		if self.nextif( "OANGL" ):
-			return ASTObject( "op" , left=tk , op="<" , right= self.shiftcomp() );
-		if self.nextif( "CANGL" ):
-			return ASTObject( "op" , left=tk , op=">" , right= self.shiftcomp() );
-		if self.nextif( "LESSEQL" ):
-			return ASTObject( "op" , left=tk , op="<=" , right= self.shiftcomp() );
-		if self.nextif( "GREATEQL" ):
-			return ASTObject( "op" , left=tk , op=">=" , right= self.shiftcomp() );
-		if self.nextif( "EQL" ):
-			return ASTObject( "op" , left=tk , op="==" , right= self.shiftcomp() );
-		if self.nextif( "NOTEQL" ):
-			return ASTObject( "op" , left=tk , op="!=" , right= self.shiftcomp() );
+		while self.cur().type in tks.keys():
+			t = self.next().type;
+			tk = ASTObject( "op" , left=tk , op=tks[t] , pos= ( self.cur().line , self.cur().pos ), right= self.add() );
 		return tk;
 	
 	def add( self ):
+		tks = { "ADD":"+" , "SUB":"-" };
 		tk = self.mult();
-		if self.nextif( "ADD" ):
-			ast = ASTObject( "op" , left=tk , op="+" , right= self.add() );
-			return ast;
-		if self.nextif( "SUB" ):
-			ast = ASTObject( "op" , left=tk , op="-" , right= self.add() );
-			return ast;
+		while self.cur().type in tks.keys():
+			t = self.next().type;
+			tk = ASTObject( "op" , left=tk , op=tks[t] , pos= ( self.cur().line , self.cur().pos ), right= self.mult() );
 		return tk;
 	
 	def mult( self ):
+		tks = { "MUL":"*" , "DIV":"/" , "MOD":"%" };
 		tk = self.unary();
-		if self.nextif( "MUL" ):
-			ast = ASTObject( "op" , left=tk , op="*" , right= self.mult() );
-			return ast;
-		if self.nextif( "DIV" ):
-			ast = ASTObject( "op" , left=tk , op="/" , right= self.mult() );
-			return ast;
-		if self.nextif( "MOD" ):
-			ast = ASTObject( "op" , left=tk , op="%" , right= self.mult() );
-			return ast;
+		while self.cur().type in tks.keys():
+			t = self.next().type;
+			tk = ASTObject( "op" , left=tk , op=tks[t] , pos= ( self.cur().line , self.cur().pos ), right= self.unary() );
 		return tk;
 		
 	def unary( self ):
 		# x++ x-- ++x --x !x ~x x as y @ & sizeof
 		if self.nextif( "SUB" ):
-			return ASTObject( "op" , op="-x", var= self.unary() );
+			return ASTObject( "op" , op="-x" , pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		if self.nextif( "INC" ):
-			return ASTObject( "op" , op= "++x", var= self.unary() );
+			return ASTObject( "op" , op= "++x" , pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		if self.nextif( "DEC" ):
-			return ASTObject( "op" , op= "--x", var= self.unary() );
+			return ASTObject( "op" , op= "--x" , pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		if self.nextif( "EXCLA" ):
-			return ASTObject( "op" , op= "!", var= self.unary() );
+			return ASTObject( "op" , op= "!" , pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		if self.nextif( "TILDE" ):
-			return ASTObject( "op" , op= "~", var= self.unary() );
+			return ASTObject( "op" , op= "~" , pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		if self.nextif( "AND" ):
-			ast = ASTObject( "op" , op= "addr", var= self.unary() );
+			ast = ASTObject( "op" , op= "addr" , pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 			if ast.var.type == "vardec" and ast.var.vtype.ispointer == False:
 				ast.var.vtype.ispointer = True;
 				return ast.var;
 			return ast;
 		if self.nextif( "AT" ):
-			return ASTObject( "op" , op= "@", var= self.unary() );
+			return ASTObject( "op" , op= "@", pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		if self.nextif( "SIZEOF" ):
-			return ASTObject( "op" , op= "sizeof", var= self.unary() );
+			return ASTObject( "op" , op= "sizeof", pos= ( self.cur().line , self.cur().pos ), var= self.unary() );
 		tk = self.term();
 		if self.nextif( "INC" ):
-			return ASTObject( "op" , op= "x++", var= tk );
+			return ASTObject( "op" , op= "x++", pos= ( self.cur().line , self.cur().pos ), var= tk );
 		if self.nextif( "DEC" ):
-			return ASTObject( "op" , op= "x--", var= tk );
+			return ASTObject( "op" , op= "x--", pos= ( self.cur().line , self.cur().pos ), var= tk );
 		if self.nextif( "AS" ):
-			return ASTObject( "op" , op= "as", var= tk , vtype= self.expect( "IDENT" ).data );
+			return ASTObject( "op" , op= "as", pos= ( self.cur().line , self.cur().pos ), var= tk , vtype= self.expect( "IDENT" ).data );
 		return tk;
 	
 	def term( self ):
@@ -190,7 +163,7 @@ class DMParser( Parser ):
 		ht = self.deftype();
 		if ht and self.matches( "IDENT" ):
 			self.popmark();
-			ast = ASTObject( "vardec" , vtype= ht , varname=self.next().data );
+			ast = ASTObject( "vardec" , vtype= ht , pos= ( self.cur().line , self.cur().pos ) , varname=self.next().data );
 			if self.nextif( "OBRKT" ):
 				ast.vtype.isarray = True;
 				ast.vtype.arraysize = self.expression();
@@ -198,29 +171,13 @@ class DMParser( Parser ):
 			return ast;
 		else:
 			self.restore();
-		# function(  )
-		tk = self.matches( "IDENT" ) and self.lookaheadmatches( "OPAREN" );
-		if tk:
-			tk = self.next();
-			ast = ASTObject( "functioncall" , name=tk.data , arguments=[] );
-			self.next();
-			st = not self.matches( "CPAREN" );
-			while st:
-				ast.arguments.append( self.expression(  ) )
-				if not self.nextif( "COMMA" ):
-					break;
-			self.expect( "CPAREN" , "')'" )
-			p = self.sur( ast );
-			if p:
-				return p;
-			return ast;
 		# structname{  }
 		# structname{ field1= value , field2 = 10 }
 		tk = self.matches( "IDENT" ) and self.lookaheadmatches( "OBRCE" );
 		if tk:
 			tk = self.next().data;
 			self.next();
-			ast = ASTObject( "structcontruct" , struct= tk , fields= {} );
+			ast = ASTObject( "structcontruct", pos= ( self.cur().line , self.cur().pos ) ,  struct= tk , fields= {} );
 			while not self.matches( "CBRCE" ):
 				fn = self.expect( "IDENT" ).data;
 				self.expect( "ASSIGN" , "'='" );
@@ -231,7 +188,7 @@ class DMParser( Parser ):
 			return ast;
 		# [ expr ] 
 		if self.matches( "OBRKT" ):
-			ast = ASTObject( "ramindex" , index=None );
+			ast = ASTObject( "ramindex" , pos= ( self.cur().line , self.cur().pos ), index=None );
 			self.next();
 			ast.index = self.expression();
 			if self.nextif( "COMMA" ):
@@ -254,7 +211,7 @@ class DMParser( Parser ):
 		# var
 		tk = self.nextif( "IDENT" );
 		if tk:
-			ast = ASTObject( "var" , name=tk.data );
+			ast = ASTObject( "var" , pos= ( tk.line , tk.pos ), name=tk.data );
 			p = self.sur( ast );
 			if p:
 				return p;
@@ -270,15 +227,28 @@ class DMParser( Parser ):
 		# expr[expr]
 		top = None;
 		if self.nextif( "DOT" ):
-			ast = ASTObject( "property" , owner=ownerr , property="" );
+			ast = ASTObject( "property" , pos= ( self.cur().line , self.cur().pos ), owner=ownerr , property="" );
 			tk = self.expect( "IDENT" );
 			ast.property = tk.data;
 			top = self.sur( ast );
 			if top:
 				return top;
 			return ast;
+		if self.nextif( "OPAREN" ):
+			ast = ASTObject( "functioncall" , pos= ( self.cur().line , self.cur().pos ) , owner= ownerr, arguments=[] );
+			st = not self.matches( "CPAREN" );
+			while st:
+				ast.arguments.append( self.expression() );
+				if not self.matches( "COMMA" ):
+					break;
+				self.next();
+			self.expect( "CPAREN" );
+			top = self.sur( ast );
+			if top:
+				return top;
+			return ast;
 		if self.nextif( "OBRKT" ):
-			ast = ASTObject( "arrayindex" , owner=ownerr , index=self.expression() );
+			ast = ASTObject( "arrayindex" , pos= ( self.cur().line , self.cur().pos ), owner=ownerr , index=self.expression() );
 			self.expect( "CBRKT" );
 			top = self.sur( ast );
 			if top:
@@ -288,48 +258,50 @@ class DMParser( Parser ):
 	
 	def codestatement( self ):
 		if self.matches( "IDENT" ) and self.lookaheadmatches( "COLON" ):
-			ast = ASTObject( "label" , name= self.next().data );
+			ast = ASTObject( "label" , name= self.next().data , pos= ( self.cur().line , self.cur().pos ) );
 			self.next();
 			return ast;
+		if self.nextif( "GOTO" ):
+			return ASTObject( "gotostatement" , value= self.expect( "IDENT" ) , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "CONTINUE" ):
-			return ASTObject( "continuestatement" );
+			return ASTObject( "continuestatement" , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "BREAK" ):
-			return ASTObject( "breakstatement" );
+			return ASTObject( "breakstatement" , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "RETURN" ):
-			return ASTObject( "returnstatement" , value= self.expression() );
+			return ASTObject( "returnstatement" , value= self.expression() , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "IF" ):
-			ast = ASTObject( "ifstatement" , condition=self.expression()  , iftrue= self.codeblock() , elsebody=None );
+			ast = ASTObject( "ifstatement" , condition=self.expression()  , iftrue= self.codeblock() , elsebody=None , pos= ( self.cur().line , self.cur().pos ) );
 			if self.nextif( "ELSE" ):
 				ast.elsebody = self.codeblock();
 			return ast;
-		if self.nextif( "FOR" ):
+		if self.nextif( "FOR"  ):
 			par = self.nextif( "OPAREN" )
-			ast = ASTObject( "forloop" , init= self.peexpr() , condition= self.peexpr() , step= self.peexpr() , body= None );
+			ast = ASTObject( "forloop" , init= self.peexpr() , condition= self.peexpr() , step= self.peexpr() , body= None , pos= ( self.cur().line , self.cur().pos ) );
 			if par:
 				self.expect( "CPAREN" , "')'" );
 			ast.body = self.codeblock();
 			return ast;
 		if self.nextif( "WHILE" ):
-			return ASTObject( "whileloop" , condition= self.peexpr() , body= self.codeblock() );
+			return ASTObject( "whileloop" , condition= self.peexpr() , body= self.codeblock() , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "DO" ):
-			ast = ASTObject( "dowhileloop" , condition= None , body= self.codeblock() );
+			ast = ASTObject( "dowhileloop" , condition= None , body= self.codeblock() , pos= ( self.cur().line , self.cur().pos ) );
 			self.expect( "WHILE" );
 			ast.condition = self.peexpr();
 			return ast;
 		if self.nextif( "REPEAT" ):
-			ast = ASTObject( "repeatloop" , amount= self.expression() , body= None , withvar= None );
+			ast = ASTObject( "repeatloop" , amount= self.expression() , body= None , withvar= None , pos= ( self.cur().line , self.cur().pos ) );
 			if self.nextif( "WITH" ):
 				ast.withvar = self.peexpr();
 			ast.body = self.codeblock();
 			return ast;
 		if self.nextif( "SWITCH" ):
-			ast = ASTObject( "switchstatement" , value= self.expression() , cases= [] , body= [] , defaultcase= None );
+			ast = ASTObject( "switchstatement" , value= self.expression() , cases= [] , body= [] , defaultcase= None , pos= ( self.cur().line , self.cur().pos ) );
 			self.expect( "OBRCE" );
 			li = 0;
 			cased = False;
 			while not self.matches( "CBRCE" ):
 				if self.nextif( "CASE" ):
-					ast.cases.append( ASTObject( "case" , testvalue= self.term() , lineindex=li ) );
+					ast.cases.append( ASTObject( "case" , testvalue= self.term() , lineindex=li , pos= ( self.cur().line , self.cur().pos ) ) );
 					self.expect( "COLON" );
 				if self.nextif( "DEFAULT" ):
 					ast.defaultcase = li;
@@ -351,7 +323,7 @@ class DMParser( Parser ):
 	
 	def deftype( self ):
 		self.mark();
-		ast = ASTObject( "deftype" , ispointer= False , isarray = False , arraysize=0 , typename= "" );
+		ast = ASTObject( "deftype" , ispointer= False , isarray = False , arraysize=0 , typename= "" , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "AND" ):
 			ast.ispointer = True;
 		if self.matches( "IDENT" ):
@@ -411,7 +383,7 @@ class DMParser( Parser ):
 		self.nextif( "SEMICOLON" )
 		return expr;
 	
-	def toplevelstatement( self ):
+	def functiondec( self ):
 		self.mark()
 		ht = self.deftype();
 		if ht and self.matches( "IDENT" ) and self.lookaheadmatches( "OPAREN" ):
@@ -433,6 +405,9 @@ class DMParser( Parser ):
 			return ast;
 		else:
 			self.restore();
+		return False;
+	
+	def structdec( self ):
 		if self.nextif( "STRUCT" ):
 			ast = ASTObject( "structdec" , name= self.expect( "IDENT" ).data );
 			if self.nextif( "OBRCE" ):
@@ -450,12 +425,18 @@ class DMParser( Parser ):
 					self.nextif( "SEMICOLON" );
 				self.expect( "CBRCE" );
 			return ast;
+		return False;
+	
+	def typedefdec( self ):
 		if self.nextif( "TYPEDEF" ):
 			ast = ASTObject( "typedef" , name= "" , vtype= self.deftype() );
 			if not ast.vtype:
 				raise ParserError( self.cur() , "a valid type" );
 			ast.name = self.expect( "IDENT" ).data;
 			return ast;
+		return False;
+	
+	def constdef( self ):
 		if self.nextif( "CONST" ):
 			ast = ASTObject( "constdef" , name= "" , vtype= self.deftype() );
 			if not ast.vtype:
@@ -464,6 +445,25 @@ class DMParser( Parser ):
 			self.expect( "ASSIGN", "a value for the constant" );
 			ast.value = self.expression();
 			self.nextif( "SEMICOLON" );
+			return ast;
+		return False;
+	
+	def toplevelstatement( self ):
+		# FUNCTION DECLARATION
+		ast = self.functiondec();
+		if ast:
+			return ast;
+		# STRUCTURE DECLARATION
+		ast = self.structdec();
+		if ast:
+			return ast;
+		# TYPEDEF DECLARATION
+		ast = self.typedefdec();
+		if ast:
+			return ast;
+		# CONSTANT DEFINITION
+		ast = self.constdef();
+		if ast:
 			return ast;
 		return None;
 			

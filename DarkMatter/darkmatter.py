@@ -19,7 +19,7 @@
 import sys
 import dmlex
 import dmparse
-import dmast
+import dmcsa
 
 def readfile( filename ):
 	readfile = open( filename , "r" );
@@ -31,25 +31,78 @@ def writefile( filename , data ):
 	writefile = open( filename , "w" );
 	writefile.write( data );
 	writefile.close();
+	
+def opToString( op ):
+	l = "";
+	r = "";
+	if op.left.type == "op":
+		l = opToString( op.left );
+	elif op.left.type == "var":
+		l =op.left.name;
+	elif op.left.type == "literal":
+		l = str( op.left.value );
+	else:
+		l = str( op.left );
+	if op.right.type == "op":
+		r = opToString( op.right );
+	elif op.right.type == "var":
+		r =op.right.name;
+	elif op.right.type == "literal":
+		r = str( op.right.value );
+	else:
+		r = str( op.right );
+	return "( %s %s %s )" % ( l , op.op , r );
+
+def stringifyPseudoCodeAtom( atom ):
+	if atom.type == "var":
+		return "$"+atom.name;
+	elif atom.type == "literal":
+		return str( atom.value );
+	else:
+		return str( atom )
+	
+def stringifyPseudoCode( pc ):
+	out = "";
+	for op in pc:
+		args = "";
+		for arg in op.args:
+			args += stringifyPseudoCodeAtom( arg ) + " , ";
+		args = args[:-3]
+		#if op.haskey( "noret" ):
+		#	nam = "";
+		#else:
+		#	nam = "$"+op.re.name+" = ";
+		out += "%s %s\n" % (  op.type , args );
+	return out;
 
 def testrun():
+	# Read the tokens and write them to a test file
 	source = readfile( "../tests/testsource.dm" );
 	lexer = dmlex.DMLexer();
 	parser = dmparse.DMParser();
 	tokens = lexer.lex( source );
 	data = "";
-	extra = "";
 	for token in tokens:
 		if token.hidden == False and token.channel == 1: #Write only the tokens that will be read
 			data += str( token ) + "\n";
 	writefile( "../tests/testtokens.tok" , data );
+	# Parse the tokens into an AST and write it to a file.
 	ast = parser.parse( tokens );
 	data = ""
 	for st in ast:
 		data += str( st ) + "\n";
-#		if st.type == "op":
-#			extra += printOp( st ) + "\n";
-	writefile( "../tests/testparse.ast" , data+extra );
+	writefile( "../tests/testparse.ast" , data );
+	# Resolve constants and save the map of them
+	data = "";
+	consts = dmcsa.createConstantMap( ast );
+	for k in consts.keys():
+		data += "%s: %s\n"%( k , str( consts[k] ) );
+	writefile( "../tests/testconstants.dict" , data );
+	for statement in ast:
+		dmcsa.analyseStatement( statement );
+	dmcsa.peephole();
+	print stringifyPseudoCode( dmcsa.pseudocode );
+	
 
 def printOp( data ):
 	if data.type == "literal":

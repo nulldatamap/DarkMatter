@@ -69,8 +69,11 @@ opS = [ "-x" , "--x" , "++x" , "x--" , "x++" , "!" , "~" ];
 
 constmap = {};
 typemap = { "int":None , "uint":None , "char":None , "bool":None , "pointer":None , "func":None };
-tempmap = {};
+globalvarmap = {};
 tempcount = 0;
+pseudocode = [];
+useables = [];
+registers = { "A":False,  "B":False , "C":False , "X":False , "Y":False , "Z":False , "I":False , "J":False };
 
 def getSizeOf( value ):
 	return None;
@@ -288,237 +291,235 @@ def resolveConstantExpressions( ast ):
 		if atom.type in expressionTypes:
 			resolveAtom( atom );
 	return ast;
-
-# -- expressions	| CONST |
-# literal			|   T   |
-# ternary			|   ?   |
-# vardec			|   F   |
-# op				|   ?   |
-# functioncall		|   F   |
-# ramindex			|   F   |
-# structcontruct	|   F   |
-# property			|   F   |
-# arrayindex		|   F   |
-# var				|   F   |
-# -- statements
-# label
-# gotostatement
-# continuestatement
-# breakstatement
-# returnstatement
-# ifstatement
-# forloop
-# whileloop
-# dowhileloop
-# repeatloop
-# switchstatement
-# case
-# deftype
-# codeblock
-# -- toplevel statements
-# functiondec
-# argdef
-# structdec
-# constdef
-# typedef
-
-def newtemp( cast = None ):
-	global tempcount, tempmap;
-	ret = ASTObject( "var" , name= "_temp#"+str(tempcount) , cast= cast , referencecount= 0 , references= [] , lastref= 0 )
-	tempcount += 1;
-	tempmap[ ret.name ] = ret;
-	return ret;
-
-def disassembleAtom( atom ):
-	global pseudocode, tempcount;
-	if atom.type == "op":
-		ops = { "=":"@set" , "+":"@add" , "-":"@sub" , "*":"@mul" , "/":"@div" , "%":"@mod" , "<<":"@lshft" , ">>":"@rshft" };
-		if atom.op in ops.keys():
-			l = disassembleAtom( atom.left );
-			r = disassembleAtom( atom.right );
-			if l.type == "literal" and r.type == "literal":
-				return resolveLTROperation( l , atom.op , r );
-			ret = newtemp(  );
-			if l.haskey( "cast" ):
-				ret.cast = l.cast;
-			#Case optimization
-			if atom.op == "+" and r.type == "literal" and r.value <= 0:
-				atom.op = "-";
-				r.value = -r.value;
-			if atom.op == "-" and r.type == "literal" and r.value <= 0:
-				atom.op = "+";
-				r.value = -r.value;
-			#Resualt
-			pc = ASTObject( ops[atom.op] , args = [ l , r ] , re = ret );
-			pseudocode.append( pc );
-			return ret;
-	if atom.type == "literal":
-		return atom;
-	if atom.type == "var":
-		if atom.name in typemap.keys():
-			raise SemanticError( "Variable name '%s' already defined as a type. At %d:%d" % ( atom.name , atom.pos[0] , atom.pos[1] ) );
-		if atom.name in constmap.keys():
-			const = constmap[ atom.name ];
-			atom.type = const.type;
-			atom._data = const._data.copy();
-		return atom;
-
-def createPseudoCode( ast ):
-	global pseudocode;
-	pseudocode = [];
-	for atom in ast:
-		disassembleAtom( atom );
-	return pseudocode;
-
-def replaceChanLinks( link , replacement , v ):
-	tv = link.re;
-	if tv.name == replacement.name:
-		return;
-	for arg in link.args:
-		if arg.type == "var" and arg.name == v.name:
-			arg._data = replacement._data;
-	for refer in tv.references:
-		replaceChanLinks( refer , replacement , tv );
-	link.re = replacement;
 	
-def resolveChain( link ):
-	if link.referencecount != 0 and len( link.references ) == 1:
-		ref = link.references[0];
-		replaceChanLinks( ref , link , ref.re );
-
-def fixPythonReferences( pc ):
-	global tempmap;
-	for op in pc:
-		for arg in op.args:
-			if arg.type == "var" and arg.name in tempmap.keys():
-				arg._data = tempmap[ arg.name ]._data;
-		if op.re.type == "var" and op.re.name in tempmap.keys():
-			op.re._data = tempmap[ op.re.name ]._data;
-		
-def updateRefCounts( pc ):
-	global tempmap;
-	for k in tempmap.keys():
-		v = tempmap[ k ];
-		v.referencecount = 0;
-		v.references = [];
-		v.lastref = 0;
-	for op in pc:
-		for arg in op.args:
-			if arg.type == "var" and arg.haskey( "referencecount" ):
-				arg.referencecount += 1;
-				if len( arg.references ) == 0 or arg.references[-1] != op:
-					arg.references.append( op )
-		
-def optimizeFlow( pc ):
-	global pseudocode, tempmap;
-	pseudocode = pc;
-	# Resolve useless temps and put temp vars into contex
-	updateRefCounts( pc );
-	for key in sorted( tempmap.keys() ):
-		resolveChain( tempmap[ key ] );
-	#fixPythonReferences( pc );
-	updateRefCounts( pc );
-	for op in pc:
-		if op.re.referencecount == 0:
-			op.noret = True;
-		elif op.re.references[-1] == op:
-			op.noret = True;
-	# Seach for negating operations
-	newpc = [];
-	prev = None;
-	negatables = { "@mul":"@div","@div":"@mul","@add":"@sub","@sub":"@mul" };
-	for op in pc:
-		if op.type in negatables.keys() and prev != None and prev.type == negatables[ op.type ]:
-			if op.args[1].type == "literal" and prev.args[1].type == "literal":
-				if op.args[1].value == prev.args[1].value:
-					oldop = newpc.pop();
-					newpc.append( ASTObject( "@set" , args= [ op.re , oldop.args[0] ]  , noret= True ) );
-					continue;
-		prev = op;
-		newpc.append( op )
-	pseudocode = newpc;
-	return pseudocode;
-
-def findRegister( op , registers ):
-	if registers.A == op:
-		return "A";
-	if registers.B == op:
-		return "B";
-	if registers.C == op:
-		return "C";
-	if registers.I == op:
-		return "I";
-	if registers.J == op:
-		return "J";
-	if registers.X == op:
-		return "X";
-	if registers.Y == op:
-		return "Y";
-	if registers.Z == op:
-		return "Z";
-		
-def getFreeRegister( registers ):
-	if registers.A == None:
-		return "A";
-	if registers.B == None:
-		return "B";
-	if registers.C == None:
-		return "C";
-	if registers.I == None:
-		return "I";
-	if registers.J == None:
-		return "J";
-	if registers.X == None:
-		return "X";
-	if registers.Y == None:
-		return "Y";
-	if registers.Z == None:
-		return "Z";
+def isVar( ast , varname ):
+	return ast.type == "var" and ast.name == varname;
+	
+def treeToList( tree ):
+	stack = [];
+	rstack = [];
+	stack.append( tree );
+	while len( stack ) > 0:
+		cur = stack.pop();
+		rstack.append( cur );
+		if cur.right.type == "op":
+			stack.append( cur.right );
+		if cur.left.type == "op":
+			stack.append( cur.left );
+	return rstack;
+	
+def opToPseudocode( op ):
+	otp = { "=" : "@set" , "+" : "@add" , "-" : "@sub" , "*" : "@mul" , "/" : "@div" , "%" : "@mod" , "<<" : "@lshift" , ">>" : "@rshift" };
+	return otp[op];
+	
+def pseudocodeToOp( psc ):
+	pto = { '@sub': '-', '@set': '=', '@rshift': '>>', '@add': '+', '@lshift': '<<', '@mod': '%', '@div': '/', '@mul': '*' }; # generated with python because I'm lazy
+	return ptp[op];
+	
+def spawnTempVar( bp=None ):
+	global tempcount;
+	if len( useables ) == 0:
+		if bp:
+			r = ASTObject( "var" );
+			r._data = bp._data.copy();
+			r.istemp = True;
+			r.name = "_temp#"+str(tempcount);
+		else:
+			r = ASTObject( "var" , name= "_temp#"+str(tempcount) , istemp = True );
+		tempcount += 1;
+	else:
+		r = useables.pop();
+		if bp:
+			c = bp._data.copy();
+			c["istemp"] = True;
+			c["name"] = r.name;
+			r._data = c;
+	pushCode( "@load" , copy( r ) );
+	return r;
+	
+def findRegister(  ):
+	global registers;
+	for reg in sorted( registers.keys() ):
+		if registers[reg] == False:
+			return reg;
 	return None;
 	
-def assignRegisters( pc ):
+def getRegister( var ):
+	global registers;
+	for reg in sorted( registers.keys() ):
+		if registers[reg]:
+			if isVar( registers[reg] , var ):
+				return reg;
+	return None;
+	
+def isPowerOfTwo( x ):
+	if( x == 0 ):
+		return 0;
+	return x & ( x - 1 ) == 0;
+
+def log2( v ): # Some bit hacking going on here, very clever ( I didn't come up with it )
+	if v & 0xAAAAAAAA:
+		r = 1;
+	else:
+		r = 0;
+	if v & 0xFFFF0000:
+		r |= 1 << 4;
+	if v & 0xFF00FF00:
+		r |= 1 << 3;
+	if v & 0xF0F0F0F0:
+		r |= 1 << 2;
+	if v & 0xCCCCCCCC:
+		r |= 1 << 1;
+	return r;
+
+def isOperation( part ):
+	return part.type != "var" and part.type != "literal";
+	
+def countReferences( setroot ):
+	stack = [];
+	count = 0;
+	if not isOperation( setroot.right ):
+		return 0;
+	stack.append( setroot.right );
+	while len( stack ) > 0:
+		cur = stack.pop();
+		if isVar( cur.right , setroot.left.name ):
+			count += 1;
+		elif cur.right.type == "op":
+			stack.append( cur.right );
+		if cur.left.type == "op":
+			stack.append( cur.left );
+	return count;
+	
+def replaceVar( oper , varname , newname ):
+	for arg in oper.args:
+		if isVar( arg , varname ):
+			arg.name = newname;
+			
+def pushCode( op , *args ):
 	global pseudocode;
-	unorder = [ "@mul" , "@add" ];
-	registers = ASTObject( "registry" , A= None , B= None , C= None , I= None , J= None , X= None , Y= None , Z= None , stack= [  ] );
+	pseudocode.append( ASTObject( op , args=args ) );
+	
+def copy( ast ):
+	r = ASTObject( ast.type );
+	r._data = ast._data.copy();
+	return r;
+
+def analyseStatement( statement ):
+	global constmap , typemap , pseudocode , tempcount , useables;
+	# Setup varaibles
+	selfref = False;
+	self = statement.left;
+	stack = treeToList( statement );
+	temps = {};
+	resualts = {};
+	ctemp = None;
+	# 
+	while len( stack ):
+		operation = stack.pop();
+		# Replace not self referencing temp variables with the setted variable itself
+		if operation.op == "=" and countReferences( operation ) < 2 and isOperation( operation.right ):
+			right = operation.right;
+			if isOperation( right ):
+				right = copy( resualts[right] );
+			if right.type == "var" and right.haskey( "istemp" ):
+				# It is being assigned to a temp variable, replace it with itself
+				i = len( pseudocode );
+				while i > 0:
+					i -= 1;
+					if pseudocode[i].type == "@load" and isVar( pseudocode[i].args[0] , right.name ):
+						pseudocode.remove( pseudocode[i] );
+						break;
+					replaceVar( pseudocode[i] , right.name , operation.left.name );
+				resualts[operation] = copy( operation.left );
+		else:
+			# Check for constant expressions
+			if operation.left.type == "literal" and operation.right.type == "literal":
+				resualts[operation] = resolveConstant( operation );
+				continue;
+			left = operation.left;
+			right = operation.right;
+			
+			if isOperation( left ):
+				left = copy( resualts[left] );
+			if isOperation( right ):
+				right = copy( resualts[right] );
+			
+			r = left;
+			if operation.op != "=" and not left.haskey( "istemp" ):
+				r = spawnTempVar( left );
+				pushCode( "@set" , r , left );
+				if left.haskey( "istemp" ):
+					pushCode( "@unload" , copy( left ) );
+					useables.append( left );
+			pushCode( opToPseudocode( operation.op ) , copy( r ) , copy( right ) );
+			
+			if right.haskey( "istemp" ):
+				pushCode( "@unload" , copy( right ) );
+				useables.append( right );
+			resualts[operation] = copy( r );
+	return pseudocode;
+	
+def peephole():
+	global pseudocode;
+	# Check for self assignments
 	npc = [];
-	for i in range( len( pc ) ):
-		op = pc[i]
+	for i in range( len( pseudocode ) ):
+		op = pseudocode[i];
 		npc.append( op );
-		if op.args[0].type == "literal": # Fix Incorrecty ordered parameters
-			if op.type in unorder:
-				temp = op.args[1];
-				op.args[1] = op.args[0];
-				op.args[0] = temp;
+		if op.type == "@set" and op.args[1].type == "var" and isVar( op.args[0] , op.args[1].name ):
+			npc.pop( );
+	pseudocode = npc;
+	# Check for zero add/sub
+	npc = [];
+	for i in range( len( pseudocode ) ):
+		op = pseudocode[i];
+		npc.append( op );
+		if ( op.type == "@add" or op.type == "@sub" ) and op.args[1].type == "literal" and op.args[1].value == 0:
+			npc.pop();
+	pseudocode = npc;
+	# Check for zero mul/div/mod
+	npc = [];
+	for i in range( len( pseudocode ) ):
+		op = pseudocode[i];
+		npc.append( op );
+		if ( op.type == "@mul" or op.type == "@div" or op.type == "@mod" ) and op.args[1].type == "literal":
+			if op.args[1].value == 0:
+				npc[ len( npc ) - 1 ] = ASTObject( "@set" , args= op.args );
+			elif op.args[1].value == 1 and op.type in [ "@div" , "@mul" ]:
+				npc.pop();
+	pseudocode = npc;
+	# Check for negating actions
+	opposideaction = { "@add":"@sub" , "@sub":"@add" , "@mul":"@div" , "@div":"@mul" , "xor":"xor" };
+	i = 0;
+	npc = [];
+	while i < len( pseudocode ) - 1: # pseudocode[i+1] will always be valid in this while loop
+		op = pseudocode[i];
+		npc.append( op );
+		if op.type in opposideaction:
+			if pseudocode[i+1].type == opposideaction[op.type]:
+				oop = pseudocode[i+1];
+				if op.args[0].type == oop.args[0].type: # REMEMBER ADD TEST FOR RAM INDEXES
+					if op.args[1].type == "literal" and oop.args[1].type == "literal" and op.args[1].value == oop.args[1].value:
+						npc.pop();
+						i += 1;
+		i += 1;
+	npc.append( pseudocode[-1] );
+	pseudocode = npc;
+	# Check for mul/div with the power for 2
+	npc = [];
+	for i in range( len( pseudocode ) ):
+		op = pseudocode[i];
+		npc.append( op );
+		if op.type in [ "@mul" , "@div" ] and op.args[1].type == "literal" and isPowerOfTwo( op.args[1].value ):
+			print "trueh"
+			if op.type == "@mul":
+				op.args[1].value = log2( op.args[1].value );
+				npc[i] = ASTObject( "@lshift" , args= [ op.args[0] , op.args[1] ] );
 			else:
-				rec = op.args[1];
-				if not op.haskey( "noret" ) and op.haskey("re"):
-					rec = op.re;
-				npc.append( ASTObject( "@set" , args= [ rec , op.args[0] ] ) );
-				op.args[0] = rec;
-		if not op.haskey( "noret" ) or op.noret == False: # Replace fake assignments with "set" operations
-			if op.haskey("re") and op.re == op.args[0]:
-				npc.append( ASTObject( "@set" , args= [ op.re , op.args[0] ] ) );
-			elif op.haskey("re"):
-				for j in range( len( pc ) - i ):
-					oop = pc[i+j];
-					for arg in oop.args:
-						if arg.type == "var" and arg.name == op.re.name:
-							arg._data = op.args[0]._data;
-				op.re = op.args[0];
-		op.noret = True;
-	pc = [];
-	for op in npc: # Scan for newly created stupidness
-		pc.append( op );
-		if op.type == "@set" and op.args[0].type == "var" and op.args[1].type == "var":
-			if op.args[0].name == op.args[1].name:
-				pc.pop();
-	pseudocode = pc;
-	return pc;
-	
-	
-	
-	
-	
-	
-	
+				op.args[1].value = log2( op.args[1].value );
+				npc[i] = ASTObject( "@rshift" , args= [ op.args[0] , op.args[1] ] );
+	pseudocode = npc;
+	# Check for constant operations
+	# Check for unused load variables
 	

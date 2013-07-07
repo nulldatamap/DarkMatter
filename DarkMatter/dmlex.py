@@ -38,7 +38,7 @@ def stateBroken( lexer , statename ):
 
 # Keywords:
 
-keywords = [ "typedef", "const" , "return", "for" , "do" , "while" , "true" , "false" , "null" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" , "with" , "asm" , "goto" , "default" ];
+keywords = [ "and", "or", "typedef", "const" , "return", "for" , "do" , "while" , "true" , "false" , "null" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" , "with" , "asm" , "goto" , "default" , "end" ];
 
 # Lexing rules:
 
@@ -72,7 +72,6 @@ lLogicAnd = LexerRule( "LOGICAND" , "&&" );
 lLogicOr = LexerRule( "LOGICOR" , "\\|\\|" );
 lLeftShift = LexerRule( "LSHIFT" , "<<" );
 lRightShift = LexerRule( "RSHIFT" , ">>" );
-lSignedShift = LexerRule( "SSHIFT" , ">>>" );
 lIncrement = LexerRule( "INC" , "\\+\\+" );
 lDecrement = LexerRule( "DEC" , "--" );
 # single operators
@@ -107,7 +106,7 @@ rules = [ lNewline, lIgnore, lComment, sBrokenComment, lString , lEString , lBro
 	lInt, lIdent, lEql, lNotEql, lNotAssign, lAddAssign, lSubAssign,
 	lMulAssign, lDivAssign, lModAssign, lAndAssign, lOrAssign, lXorAssign,
 	lLessEql, lGreatEql, lLogicAnd, lLogicOr , lLeftShift , lRightShift ,
-	lSignedShift , lIncrement , lDecrement , lOBrkt, lCBrkt, lOParen, lCParen,
+	lIncrement , lDecrement , lOBrkt, lCBrkt, lOParen, lCParen,
 	lOBrce, lCBrce, lOAngl, lCAngl, lAssign, lAdd, lSub, lAt, lMul, lDiv, lAnd,
 	lOr, lXor, lMod, lColon, lQuest, lExcla, lTilde, lDot, lComma, lSemiColon ]
 
