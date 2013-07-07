@@ -93,15 +93,15 @@ def testrun():
 		data += str( st ) + "\n";
 	writefile( "../tests/testparse.ast" , data );
 	# Resolve constants and save the map of them
-	data = "";
-	consts = dmcsa.createConstantMap( ast );
-	for k in consts.keys():
-		data += "%s: %s\n"%( k , str( consts[k] ) );
-	writefile( "../tests/testconstants.dict" , data );
-	for statement in ast:
-		dmcsa.analyseStatement( statement );
-	dmcsa.peephole();
-	print stringifyPseudoCode( dmcsa.pseudocode );
+	#data = "";
+	#consts = dmcsa.createConstantMap( ast );
+	#for k in consts.keys():
+	#	data += "%s: %s\n"%( k , str( consts[k] ) );
+	#writefile( "../tests/testconstants.dict" , data );
+	#for statement in ast:
+	#	dmcsa.analyseStatement( statement );
+	#dmcsa.peephole();
+	#print stringifyPseudoCode( dmcsa.pseudocode );
 	
 
 def printOp( data ):

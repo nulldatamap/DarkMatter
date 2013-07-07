@@ -34,6 +34,13 @@ class DMParser( Parser ):
 	def __init__( self ):
 		Parser.__init__( self );
 	
+	# ##################################
+	# IT AIN'T BROKEN, SO DON'T FIX IT!!
+	# ##################################
+	#                 |
+	#                 |
+	#                 V
+	
 	def parse( self , tokens ):
 		Parser.parse( self , tokens );
 		self.skiptokens(); # Skip past comments and newlines that the parser might start at
@@ -256,7 +263,15 @@ class DMParser( Parser ):
 			return ast;
 		return False;
 	
+	#                 ^
+	#                 |
+	#                 |
+	# ##################################
+	# IT AIN'T BROKEN, SO DON'T FIX IT!!
+	# ##################################
+	
 	def codestatement( self ):
+		# <fine>
 		if self.matches( "IDENT" ) and self.lookaheadmatches( "COLON" ):
 			ast = ASTObject( "label" , name= self.next().data , pos= ( self.cur().line , self.cur().pos ) );
 			self.next();
@@ -269,9 +284,22 @@ class DMParser( Parser ):
 			return ASTObject( "breakstatement" , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "RETURN" ):
 			return ASTObject( "returnstatement" , value= self.expression() , pos= ( self.cur().line , self.cur().pos ) );
+		# </fine>
 		if self.nextif( "IF" ):
-			ast = ASTObject( "ifstatement" , condition=self.expression()  , iftrue= self.codeblock() , elsebody=None , pos= ( self.cur().line , self.cur().pos ) );
+			print "If"
+			ast = ASTObject( "ifstatement" , condition=self.expression()  , iftrue= None , elsebody=None , pos= ( self.cur().line , self.cur().pos ) );
+			code = ASTObject( "codeblock" , code= [] );
+			ast.iftrue = code;
+			self.nextif( "DO" ); # Do statements are allowed
+			while not self.matches( "END" ):
+				c = self.code();
+				if c:
+					code.code.append( c );
+				if self.matches( "EOF" ):
+					raise ParserError( self.cur() , "'end'" );
+			self.expect( "END" , "'end'" );
 			if self.nextif( "ELSE" ):
+				print "Else"
 				ast.elsebody = self.codeblock();
 			return ast;
 		if self.nextif( "FOR"  ):
@@ -284,8 +312,7 @@ class DMParser( Parser ):
 		if self.nextif( "WHILE" ):
 			return ASTObject( "whileloop" , condition= self.peexpr() , body= self.codeblock() , pos= ( self.cur().line , self.cur().pos ) );
 		if self.nextif( "DO" ):
-			ast = ASTObject( "dowhileloop" , condition= None , body= self.codeblock() , pos= ( self.cur().line , self.cur().pos ) );
-			self.expect( "WHILE" );
+			ast = ASTObject( "dowhileloop" , condition= None , body= self.codeblock( False , "WHILE" ) , pos= ( self.cur().line , self.cur().pos ) );
 			ast.condition = self.peexpr();
 			return ast;
 		if self.nextif( "REPEAT" ):
@@ -314,12 +341,16 @@ class DMParser( Parser ):
 			return ast;
 		return None;
 	
+	# Should be fully working, no need for change
+	
 	def peexpr( self ): #Stands for Possibly Empty EXPRession ( aka an expression or a semicolon instead )
 		if self.nextif( "SEMICOLON" ) or self.matches( "EOF" ):
 			return None;
 		expr = self.expression();
 		self.nextif( "SEMICOLON" ); #Consume trailing semicolon. Just like all the other uses below
 		return expr;
+	
+	# Need new type notation syntax
 	
 	def deftype( self ):
 		self.mark();
@@ -338,6 +369,8 @@ class DMParser( Parser ):
 			ast.isarray = True;
 		return ast;
 	
+	# Should be fully working, no need for change
+	
 	def code( self ):
 		if self.nextif( "SEMICOLON" ) or self.matches( "EOF" ):
 			return None;
@@ -346,28 +379,28 @@ class DMParser( Parser ):
 			self.nextif( "SEMICOLON" )
 			return smt;
 		expr = self.expression();
+		print "expr"
 		self.nextif( "SEMICOLON" )
 		return expr;
 	
+	# This is subject to change
+	
 	def codeblock( self , curlblock= False ):
 		ast = ASTObject( "codeblock" , code= [] );
-		if self.nextif( "OBRCE" ):
-			while not self.matches( "CBRCE" ):
-				c = self.code();
-				if c:
-					ast.code.append( c );
-				if self.matches( "EOF" ):
-					raise ParserError( self.cur() , "'}'" );
-			self.expect( "CBRCE" , "'}'" );
-			return ast;
-		elif curlblock:
-			raise ParserError( self.cur() , "a valid code block" );
-		else:
-			try:
-				return self.code();
-			except:
-				raise ParserError( self.cur() , "a valid code block or code line" )
-				
+		self.nextif( "DO" ); # Do statements are allowed
+		while not self.matches( "END" ):
+			print "code:"
+			c = self.code();
+			print "end code;"
+			if c:
+				ast.code.append( c );
+			if self.matches( "EOF" ):
+				raise ParserError( self.cur() , "'end'" );
+		self.expect( "END" , "'end'" );
+		return ast;
+	
+	# Should be fully working, no need for change
+	
 	def toplevelcode( self ):
 		if self.nextif( "SEMICOLON" ) or self.matches( "EOF" ):
 			return None;
@@ -382,6 +415,8 @@ class DMParser( Parser ):
 		expr = self.expression();
 		self.nextif( "SEMICOLON" )
 		return expr;
+	
+	# Change.. Change.. Change...
 	
 	def functiondec( self ):
 		self.mark()
@@ -407,6 +442,8 @@ class DMParser( Parser ):
 			self.restore();
 		return False;
 	
+	# This one only need some new body syntax
+	
 	def structdec( self ):
 		if self.nextif( "STRUCT" ):
 			ast = ASTObject( "structdec" , name= self.expect( "IDENT" ).data );
@@ -427,6 +464,8 @@ class DMParser( Parser ):
 			return ast;
 		return False;
 	
+	# Should be fine when types are fixed
+	
 	def typedefdec( self ):
 		if self.nextif( "TYPEDEF" ):
 			ast = ASTObject( "typedef" , name= "" , vtype= self.deftype() );
@@ -435,6 +474,8 @@ class DMParser( Parser ):
 			ast.name = self.expect( "IDENT" ).data;
 			return ast;
 		return False;
+	
+	# So same with this one
 	
 	def constdef( self ):
 		if self.nextif( "CONST" ):
@@ -447,6 +488,8 @@ class DMParser( Parser ):
 			self.nextif( "SEMICOLON" );
 			return ast;
 		return False;
+	
+	# Should be fully working, no need for change
 	
 	def toplevelstatement( self ):
 		# FUNCTION DECLARATION
