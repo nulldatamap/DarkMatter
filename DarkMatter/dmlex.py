@@ -1,15 +1,15 @@
 # Copyright (C) 2013  Marco Aslak Persson
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
@@ -38,7 +38,7 @@ def stateBroken( lexer , statename ):
 
 # Keywords:
 
-keywords = [ "and", "or", "typedef", "const" , "return", "for" , "do" , "while" , "true" , "false" , "null" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" , "with" , "asm" , "goto" , "default" , "end" ];
+keywords = [ "and", "or", "typedef", "const" , "return", "for" , "do" , "loop" , "while" , "true" , "false" , "null" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" , "with" , "asm" , "goto" , "default" , "end" , "func" , "label" ];
 
 # Lexing rules:
 
@@ -54,7 +54,7 @@ lOct = LexerRule( "OCT" , "0[0-8]+" );
 lInt = LexerRule( "INT" , "-?[0-9]+" );
 lIdent = LexerRule( "IDENT" , "[a-zA-Z_][a-zA-Z0-9_]*" );
 # combined operators
-# == <> != ~= += -= *= /= %= &= |= ^= <= >= && || << >> >>>
+# == <> != ~= += -= *= /= %= &= |= ^= <= >= && || << >> >>> ->
 lEql = LexerRule( "EQL" , "==" );
 lNotEql = LexerRule( "NOTEQL" , "(<>)|(!=)" );
 lNotAssign = LexerRule( "NOTASSIGN" , "~=" );
@@ -74,8 +74,9 @@ lLeftShift = LexerRule( "LSHIFT" , "<<" );
 lRightShift = LexerRule( "RSHIFT" , ">>" );
 lIncrement = LexerRule( "INC" , "\\+\\+" );
 lDecrement = LexerRule( "DEC" , "--" );
+lArrow = LexerRule( "ARROW" , "->" );
 # single operators
-# [ ] ( ) { } < > = + - @ * / & | ^ % : ? ! ~ . , ;
+# [ ] ( ) { } < > = + - @ * / & | ^ % : ? ! ~ . , ; #
 lOBrkt = LexerRule( "OBRKT" , "\\[" );
 lCBrkt = LexerRule( "CBRKT" , "\\]" );
 lOParen = LexerRule( "OPAREN" , "\\(" );
@@ -101,14 +102,15 @@ lTilde = LexerRule( "TILDE" , "~" );
 lDot = LexerRule( "DOT" , "\\." );
 lComma = LexerRule( "COMMA" , "," );
 lSemiColon = LexerRule( "SEMICOLON" , ";" );
+lAddress = LexerRule( "ADDRESS" , "#" );
 
 rules = [ lNewline, lIgnore, lComment, sBrokenComment, lString , lEString , lBrokenString , lHex, lOct,
 	lInt, lIdent, lEql, lNotEql, lNotAssign, lAddAssign, lSubAssign,
 	lMulAssign, lDivAssign, lModAssign, lAndAssign, lOrAssign, lXorAssign,
 	lLessEql, lGreatEql, lLogicAnd, lLogicOr , lLeftShift , lRightShift ,
-	lIncrement , lDecrement , lOBrkt, lCBrkt, lOParen, lCParen,
+	lIncrement , lDecrement , lArrow , lOBrkt, lCBrkt, lOParen, lCParen,
 	lOBrce, lCBrce, lOAngl, lCAngl, lAssign, lAdd, lSub, lAt, lMul, lDiv, lAnd,
-	lOr, lXor, lMod, lColon, lQuest, lExcla, lTilde, lDot, lComma, lSemiColon ]
+	lOr, lXor, lMod, lColon, lQuest, lExcla, lTilde, lDot, lComma, lSemiColon ,lAddress ]
 
 # Lexing
 
