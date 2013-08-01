@@ -83,7 +83,8 @@ def testrun():
 	tokens = lexer.lex( source );
 	data = "";
 	for token in tokens:
-		if token.hidden == False and token.channel == 1: #Write only the tokens that will be read
+		#Write only the tokens that will be read
+		if token.hidden == False and token.channel == 1:
 			data += str( token ) + "\n";
 	writefile( "../tests/testtokens.tok" , data );
 	# Parse the tokens into an AST and write it to a file.
@@ -107,11 +108,13 @@ def testrun():
 def printOp( data ):
 	if data.type == "literal":
 		return str( data.value )
-	return "( %s %s %s )"%( printOp( data.left ) , data.op , printOp( data.right ) );
+	return "( %s %s %s )"%( printOp( data.left ) , data.op ,
+		            		printOp( data.right ) );
 	
 	
 def main( argv ):
-	print "The DarkMatter compiler for the DCPU16.\nWritten my Marco Aslak Persson.\n"
+	print """The DarkMatter compiler for the DCPU16.
+	Written my Marco Aslak Persson.\n"""
 	testrun(); # a temporary testing function
 
 if __name__ == "__main__":

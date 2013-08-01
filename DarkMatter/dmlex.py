@@ -29,24 +29,36 @@ from IceLeaf import *
 
 def stateBroken( lexer , statename ):
 	"""This state function will be called when a open/close pair failed
-	but the open part is found( A.k.a. a string or block comment that is not closed )
+	but the open part is found( A.k.a. a string or block comment that is not \
+	closed )
 	"""
 	if statename == "BROKEN_COMMENT":
-		raise StateError( "broken comment" , "no block comment ending was found!" , lexer.pos , lexer.line );
-	elif statename == "BROKEN_STRING": # This is also the name of a good track.
-		raise StateError( "broken string" , "no string ending was found!" , lexer.pos , lexer.line );
+		raise StateError( "broken comment" ,
+			              "no block comment ending was found!" , lexer.pos ,
+			              lexer.line );
+	# This is also the name of a good track.
+	elif statename == "BROKEN_STRING":
+		raise StateError( "broken string" , "no string ending was found!" ,
+			               lexer.pos , lexer.line );
 
 # Keywords:
 
-keywords = [ "and", "or", "typedef", "const" , "return", "for" , "do" , "loop" , "while" , "true" , "false" , "null" , "if" , "else" , "switch" , "case" , "break" , "continue" , "struct" , "repeat" , "with" , "asm" , "goto" , "default" , "end" , "func" , "label" ];
+keywords = [ "and", "or", "typedef", "const" , "return", "for" , "do" ,
+			 "loop" , "while" , "true" , "false" , "null" , "if" , "else" ,
+			 "switch" , "case" , "break" , "continue" , "struct" , "repeat" ,
+			 "with" , "asm" , "goto" , "default" , "end" , "func" , "label" ];
 
 # Lexing rules:
 
 lNewline = LexerRule( "NEWLINE" , "\n" , 0 , True );
 lIgnore = LexerRule( "IGNORE" , "[\r \t]" );
-lComment = LexerRule( "COMMENT" , r"(//[^\n]*)|(/\*(.|\n)*\*/)" , 0 , True ); # Comments are still lexed, and are saved in channel 0 as hidden tokens
-sBrokenComment = LexerState( "BROKEN_COMMENT" , r"/\*" , stateBroken ); # If the valid comment check didn't work, but the 'not closed' comment check did, raise an error
-lString = LexerRule( "STRING" , '("((\\\\")|[^"])*[^\\\\]")|\'((\\\\\')|[^\'])*[^\\\\]\'' ); # Both single and double quote strings
+# Comments are still lexed, and are saved in channel 0 as hidden tokens
+lComment = LexerRule( "COMMENT" , r"(//[^\n]*)|(/\*(.|\n)*\*/)" , 0 , True );
+ # If the valid comment check didn't work, but the 'not closed'
+ # comment check did, raise an error
+sBrokenComment = LexerState( "BROKEN_COMMENT" , r"/\*" , stateBroken );
+lString = LexerRule( "STRING" ,
+					 '("((\\\\")|[^"])*[^\\\\]")|\'((\\\\\')|[^\'])*[^\\\\]\'');
 lBrokenString = LexerState( "BROKEN_STRING" , '(")|(\')' , stateBroken );
 lEString = LexerRule( "STRING" , '("")|(\'\')' );
 lHex = LexerRule( "HEX" , "0x[a-fA-F0-9]+" );
@@ -104,13 +116,14 @@ lComma = LexerRule( "COMMA" , "," );
 lSemiColon = LexerRule( "SEMICOLON" , ";" );
 lAddress = LexerRule( "ADDRESS" , "#" );
 
-rules = [ lNewline, lIgnore, lComment, sBrokenComment, lString , lEString , lBrokenString , lHex, lOct,
-	lInt, lIdent, lEql, lNotEql, lNotAssign, lAddAssign, lSubAssign,
-	lMulAssign, lDivAssign, lModAssign, lAndAssign, lOrAssign, lXorAssign,
-	lLessEql, lGreatEql, lLogicAnd, lLogicOr , lLeftShift , lRightShift ,
-	lIncrement , lDecrement , lArrow , lOBrkt, lCBrkt, lOParen, lCParen,
-	lOBrce, lCBrce, lOAngl, lCAngl, lAssign, lAdd, lSub, lAt, lMul, lDiv, lAnd,
-	lOr, lXor, lMod, lColon, lQuest, lExcla, lTilde, lDot, lComma, lSemiColon ,lAddress ]
+rules = [ lNewline, lIgnore, lComment, sBrokenComment, lString , lEString ,
+	lBrokenString , lHex, lOct, lInt, lIdent, lEql, lNotEql, lNotAssign,
+	lAddAssign, lSubAssign, lMulAssign, lDivAssign, lModAssign, lAndAssign,
+	lOrAssign, lXorAssign, lLessEql, lGreatEql, lLogicAnd, lLogicOr ,
+	lLeftShift , lRightShift , lIncrement , lDecrement , lArrow , lOBrkt,
+	lCBrkt, lOParen, lCParen, lOBrce, lCBrce, lOAngl, lCAngl, lAssign, lAdd,
+	lSub, lAt, lMul, lDiv, lAnd, lOr, lXor, lMod, lColon, lQuest, lExcla,
+	lTilde, lDot, lComma, lSemiColon ,lAddress ]
 
 # Lexing
 

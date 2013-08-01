@@ -28,10 +28,16 @@ class SemanticError( Exception ):
 
 types = [ "bool" , "int" , "uint" , "char" , "pointer" , "func" ];
 
-expressionTypes = [ "ternary" , "op" , "vardec" , "functioncall" , "structcontruct" , "ramindex" , "var" , "property" , "arrayindex" , "literal" ];
-nonConstantTypes = [ "functioncall" , "ramindex" , "property" , "arrayindex" , "vardec" , "structconstruct" ];
+expressionTypes = [ "ternary" , "op" , "vardec" , "functioncall" ,
+                	"structcontruct" , "ramindex" , "var" , "property" ,
+                	"arrayindex" , "literal" ];
 
-opLTR = [ "&" , "|" , "^" , "&&" , "||" , "<<" , ">>" , "<" , ">" , "==" , "<=" , ">=" , "!=" , "+" , "-" , "*" , "/" , "%" ];
+nonConstantTypes = [ "functioncall" , "ramindex" , "property" , "arrayindex" ,
+					 "vardec" , "structconstruct" ];
+
+opLTR = [ "&" , "|" , "^" , "&&" , "||" , "<<" , ">>" , "<" , ">" , "==" ,
+     	  "<=" , ">=" , "!=" , "+" , "-" , "*" , "/" , "%" ];
+
 opS = [ "-x" , "--x" , "++x" , "x--" , "x++" , "!" , "~" ];
 
 # -- expressions	| CONST |
@@ -68,12 +74,15 @@ opS = [ "-x" , "--x" , "++x" , "x--" , "x++" , "!" , "~" ];
 # typedef
 
 constmap = {};
-typemap = { "int":None , "uint":None , "char":None , "bool":None , "pointer":None , "func":None };
+typemap = { "int":None , "uint":None , "char":None , "bool":None ,
+			"pointer":None , "func":None };
+
 globalvarmap = {};
 tempcount = 0;
 pseudocode = [];
 useables = [];
-registers = { "A":False,  "B":False , "C":False , "X":False , "Y":False , "Z":False , "I":False , "J":False };
+registers = { "A":False,  "B":False , "C":False , "X":False ,
+			  "Y":False , "Z":False , "I":False , "J":False };
 
 def getSizeOf( value ):
 	return None;
@@ -85,11 +94,13 @@ def createConstantMap( ast ):
 		if atom.type == "constdef":
 			value = resolveConstant( atom.value );
 			if not value:
-				raise SemanticError( "Can not define a constant with a non-constant value! At %d:%d"%( atom.value.pos[0] , atom.value.pos[1] ) );
+				raise SemanticError( "Can not define a constant with a " +
+					                 "non-constant value! At %d:%d" %
+					                 (atom.value.pos[0] , atom.value.pos[1] ));
 			constmap[ atom.name ] = value;
 	return constmap;
-	
-# "&" , "|" , "^" , "&&" , "||" , "<<" , ">>" , "<" , ">" , "==" , "<=" , ">=" , "!=" , "+" , "-" , "*" , "/" , "%"
+
+
 def resolveLTROperation( left , op , right ):
 	if op == "+":
 		if left.vtype == "string":
@@ -102,7 +113,9 @@ def resolveLTROperation( left , op , right ):
 		left.value += right.value;
 		return left;
 	if left.vtype == "string" or right.vtype == "string":
-		raise SemanticError( "Can not perform \'"+op+"' operation on a string constant. At %d:%d"%( op.pos[0] , op.pos[1] ) );
+		raise SemanticError( "Can not perform \'" + op +
+			                 "' operation on a string constant. At %d:%d" %
+			                 ( op.pos[0] , op.pos[1] ) );
 	if op == "&":
 		left.value &= right.value;
 		return left;
@@ -135,34 +148,46 @@ def resolveLTROperation( left , op , right ):
 		return left;
 	if op == "<":
 		if left.value < right.value:
-			return ASTObject( "literal" , vtype= "int", value= 1, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 1,
+				              cast= "bool" );
 		else:
-			return ASTObject( "literal" , vtype= "int", value= 0, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 0,
+							  cast= "bool" );
 	if op == ">":
 		if left.value > right.value:
-			return ASTObject( "literal" , vtype= "int", value= 1, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 1,
+				              cast= "bool" );
 		else:
-			return ASTObject( "literal" , vtype= "int", value= 0, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 0,
+				              cast= "bool" );
 	if op == "==":
 		if left.value == right.value:
-			return ASTObject( "literal" , vtype= "int", value= 1, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 1,
+				              cast= "bool" );
 		else:
-			return ASTObject( "literal" , vtype= "int", value= 0, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 0,
+				              cast= "bool" );
 	if op == "<=":
 		if left.value <= right.value:
-			return ASTObject( "literal" , vtype= "int", value= 1, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 1,
+				              cast= "bool" );
 		else:
-			return ASTObject( "literal" , vtype= "int", value= 0, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 0,
+				              cast= "bool" );
 	if op == ">=":
 		if left.value >= right.value:
-			return ASTObject( "literal" , vtype= "int", value= 1, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 1,
+				              cast= "bool" );
 		else:
-			return ASTObject( "literal" , vtype= "int", value= 0, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 0,
+                              cast= "bool" );
 	if op == "!=":
 		if left.value != right.value:
-			return ASTObject( "literal" , vtype= "int", value= 1, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 1,
+				              cast= "bool" );
 		else:
-			return ASTObject( "literal" , vtype= "int", value= 0, cast= "bool" );
+			return ASTObject( "literal" , vtype= "int", value= 0,
+							  cast= "bool" );
 	if op == "-":
 		left.value -= right.value;
 		return left;
@@ -180,7 +205,9 @@ def resolveLTROperation( left , op , right ):
 #  "-x" , "--x" , "++x" , "x--" , "x++" , "!" , "~"
 def resolveSOperation( op , val ):
 	if val.vtype == "string":
-		raise SemanticError( "Can not perform \'"+op+"' operation on a string constant. At %d:%d"%( op.pos[0] , op.pos[1] ) );
+		raise SemanticError( "Can not perform \'" + op +
+			"' operation on a string constant. At %d:%d" %
+			( op.pos[0] , op.pos[1] ) );
 	if op == "x--" or op == "x++":
 		return val;
 	if op == "-x":
@@ -210,7 +237,9 @@ def resolveConstant( expr ):
 			expr.type = const.type;
 			expr._data = const._data.copy();
 		else:
-			raise SemanticError( "No constant defined with the name '"+expr.name+"'. At %d:%d"%( expr.pos[0] , expr.pos[1] ) );
+			raise SemanticError( "No constant defined with the name '" +
+				                 expr.name + "'. At %d:%d" %
+				                 ( expr.pos[0] , expr.pos[1] ) );
 	if expr.type in nonConstantTypes:
 		return None;
 	if expr.type == "literal":
@@ -256,7 +285,8 @@ def isConstant( expr ):
 	if expr.type == "ternary":
 		if isConstant( expr.condition ):
 			try:
-				tof = resolveConstant( expr.condition ); # There is a lot of things that can go wrong here, heh
+				# There is a lot of things that can go wrong here, heh
+				tof = resolveConstant( expr.condition );
 			except:
 				return False;
 			if tof == None:
@@ -309,11 +339,13 @@ def treeToList( tree ):
 	return rstack;
 	
 def opToPseudocode( op ):
-	otp = { "=" : "@set" , "+" : "@add" , "-" : "@sub" , "*" : "@mul" , "/" : "@div" , "%" : "@mod" , "<<" : "@lshift" , ">>" : "@rshift" };
+	otp = { "=" : "@set" , "+" : "@add" , "-" : "@sub" , "*" : "@mul" ,
+			"/" : "@div" , "%" : "@mod" , "<<" : "@lshift" , ">>" : "@rshift" };
 	return otp[op];
 	
 def pseudocodeToOp( psc ):
-	pto = { '@sub': '-', '@set': '=', '@rshift': '>>', '@add': '+', '@lshift': '<<', '@mod': '%', '@div': '/', '@mul': '*' }; # generated with python because I'm lazy
+	pto = { '@sub': '-', '@set': '=', '@rshift': '>>', '@add': '+',
+			'@lshift': '<<', '@mod': '%', '@div': '/', '@mul': '*' };
 	return ptp[op];
 	
 def spawnTempVar( bp=None ):
@@ -325,7 +357,8 @@ def spawnTempVar( bp=None ):
 			r.istemp = True;
 			r.name = "_temp#"+str(tempcount);
 		else:
-			r = ASTObject( "var" , name= "_temp#"+str(tempcount) , istemp = True );
+			r = ASTObject( "var" , name= "_temp#"+str(tempcount) ,
+				 		   istemp = True );
 		tempcount += 1;
 	else:
 		r = useables.pop();
@@ -357,7 +390,8 @@ def isPowerOfTwo( x ):
 		return 0;
 	return x & ( x - 1 ) == 0;
 
-def log2( v ): # Some bit hacking going on here, very clever ( I didn't come up with it )
+# Some bit hacking going on here, very clever ( I didn't come up with it )
+def log2( v ):
 	if v & 0xAAAAAAAA:
 		r = 1;
 	else:
@@ -417,24 +451,30 @@ def analyseStatement( statement ):
 	# 
 	while len( stack ):
 		operation = stack.pop();
-		# Replace not self referencing temp variables with the setted variable itself
-		if operation.op == "=" and countReferences( operation ) < 2 and isOperation( operation.right ):
+		if operation.op == "=" and countReferences( operation ) < 2 and \
+			isOperation( operation.right ):
+
 			right = operation.right;
 			if isOperation( right ):
 				right = copy( resualts[right] );
 			if right.type == "var" and right.haskey( "istemp" ):
-				# It is being assigned to a temp variable, replace it with itself
 				i = len( pseudocode );
 				while i > 0:
 					i -= 1;
-					if pseudocode[i].type == "@load" and isVar( pseudocode[i].args[0] , right.name ):
+					if pseudocode[i].type == "@load" and \
+						isVar( pseudocode[i].args[0] , right.name ):
+
 						pseudocode.remove( pseudocode[i] );
 						break;
-					replaceVar( pseudocode[i] , right.name , operation.left.name );
+					replaceVar( pseudocode[i] , right.name ,
+								operation.left.name );
+
 				resualts[operation] = copy( operation.left );
 		else:
 			# Check for constant expressions
-			if operation.left.type == "literal" and operation.right.type == "literal":
+			if operation.left.type == "literal" and\
+				operation.right.type == "literal":
+
 				resualts[operation] = resolveConstant( operation );
 				continue;
 			left = operation.left;
@@ -452,7 +492,8 @@ def analyseStatement( statement ):
 				if left.haskey( "istemp" ):
 					pushCode( "@unload" , copy( left ) );
 					useables.append( left );
-			pushCode( opToPseudocode( operation.op ) , copy( r ) , copy( right ) );
+			pushCode( opToPseudocode( operation.op ) , copy( r ) ,
+				 	  copy( right ) );
 			
 			if right.haskey( "istemp" ):
 				pushCode( "@unload" , copy( right ) );
@@ -467,7 +508,9 @@ def peephole():
 	for i in range( len( pseudocode ) ):
 		op = pseudocode[i];
 		npc.append( op );
-		if op.type == "@set" and op.args[1].type == "var" and isVar( op.args[0] , op.args[1].name ):
+		if op.type == "@set" and op.args[1].type == "var" and \
+			isVar( op.args[0] ,op.args[1].name ):
+
 			npc.pop( );
 	pseudocode = npc;
 	# Check for zero add/sub
@@ -475,7 +518,9 @@ def peephole():
 	for i in range( len( pseudocode ) ):
 		op = pseudocode[i];
 		npc.append( op );
-		if ( op.type == "@add" or op.type == "@sub" ) and op.args[1].type == "literal" and op.args[1].value == 0:
+		if ( op.type == "@add" or op.type == "@sub" ) and \
+			op.args[1].type == "literal" and op.args[1].value == 0:
+
 			npc.pop();
 	pseudocode = npc;
 	# Check for zero mul/div/mod
@@ -483,24 +528,32 @@ def peephole():
 	for i in range( len( pseudocode ) ):
 		op = pseudocode[i];
 		npc.append( op );
-		if ( op.type == "@mul" or op.type == "@div" or op.type == "@mod" ) and op.args[1].type == "literal":
+		if ( op.type == "@mul" or op.type == "@div" or op.type == "@mod" ) and\
+			op.args[1].type == "literal":
+
 			if op.args[1].value == 0:
 				npc[ len( npc ) - 1 ] = ASTObject( "@set" , args= op.args );
 			elif op.args[1].value == 1 and op.type in [ "@div" , "@mul" ]:
 				npc.pop();
 	pseudocode = npc;
 	# Check for negating actions
-	opposideaction = { "@add":"@sub" , "@sub":"@add" , "@mul":"@div" , "@div":"@mul" , "xor":"xor" };
+	opposideaction = { "@add":"@sub" , "@sub":"@add" , "@mul":"@div" ,
+					   "@div":"@mul" , "xor":"xor" };
 	i = 0;
 	npc = [];
-	while i < len( pseudocode ) - 1: # pseudocode[i+1] will always be valid in this while loop
+	 # pseudocode[i+1] will always be valid in this while loop
+	while i < len( pseudocode ) - 1:
 		op = pseudocode[i];
 		npc.append( op );
 		if op.type in opposideaction:
 			if pseudocode[i+1].type == opposideaction[op.type]:
 				oop = pseudocode[i+1];
-				if op.args[0].type == oop.args[0].type: # REMEMBER ADD TEST FOR RAM INDEXES
-					if op.args[1].type == "literal" and oop.args[1].type == "literal" and op.args[1].value == oop.args[1].value:
+				 # REMEMBER ADD TEST FOR RAM INDEXES
+				if op.args[0].type == oop.args[0].type:
+					if op.args[1].type == "literal" and \
+						oop.args[1].type == "literal" and \
+						op.args[1].value == oop.args[1].value:
+
 						npc.pop();
 						i += 1;
 		i += 1;
@@ -511,14 +564,18 @@ def peephole():
 	for i in range( len( pseudocode ) ):
 		op = pseudocode[i];
 		npc.append( op );
-		if op.type in [ "@mul" , "@div" ] and op.args[1].type == "literal" and isPowerOfTwo( op.args[1].value ):
+		if op.type in [ "@mul" , "@div" ] and op.args[1].type == "literal" and \
+			isPowerOfTwo( op.args[1].value ):
+
 			print "trueh"
 			if op.type == "@mul":
 				op.args[1].value = log2( op.args[1].value );
-				npc[i] = ASTObject( "@lshift" , args= [ op.args[0] , op.args[1] ] );
+				npc[i] = ASTObject( "@lshift" , args= [ op.args[0] ,
+														op.args[1] ] );
 			else:
 				op.args[1].value = log2( op.args[1].value );
-				npc[i] = ASTObject( "@rshift" , args= [ op.args[0] , op.args[1] ] );
+				npc[i] = ASTObject( "@rshift" , args= [ op.args[0] ,
+														op.args[1] ] );
 	pseudocode = npc;
 	# Check for constant operations
 	# Check for unused load variables

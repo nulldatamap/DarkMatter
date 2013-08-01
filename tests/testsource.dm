@@ -17,6 +17,9 @@ typedef #char str;
 label gotohere;
 goto gotohere;
 
+[0xFFFF] = 10;
+@0xFFFF = 10;
+
 loop
   x--;
 while x < 10
