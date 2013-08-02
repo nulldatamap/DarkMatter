@@ -28,12 +28,9 @@ print("no more beer on the wall!")
 
 Functions:
 ```c
-
-//syntax 1:
 func giveMeAnInt( myInt : int ) -> int
-{
     return myInt + 27 << 1
-}
+end
 print( "My int is: "  + giveMeAnInt( 3 ) )
 
 ```
